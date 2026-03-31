@@ -225,6 +225,36 @@
   .natura2000-highlight img {
     filter: saturate(1.8) brightness(1.1) contrast(1.2);
   }
+  /* Custom Modal (ersetzt native alert/prompt) */
+  .modal-overlay {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.6); z-index:99999;
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(2px);
+  }
+  .modal-box {
+    background:#1e2832; border:1px solid rgba(255,255,255,0.2);
+    border-radius:10px; padding:22px 24px; min-width:320px; max-width:460px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  }
+  .modal-box .modal-msg {
+    color:#e0e0e0; font-size:13px; line-height:1.6; margin-bottom:16px; white-space:pre-line;
+  }
+  .modal-box input[type="text"] {
+    width:100%; padding:8px 10px; background:#111; color:#e0e0e0;
+    border:1px solid #444; border-radius:6px; font-size:13px; margin-bottom:14px;
+    font-family:inherit;
+  }
+  .modal-box input[type="text"]:focus { outline:none; border-color:#64b5f6; }
+  .modal-btns { display:flex; gap:8px; justify-content:flex-end; }
+  .modal-btns button {
+    padding:7px 18px; border:none; border-radius:6px; cursor:pointer;
+    font-size:12px; font-weight:600; font-family:inherit;
+  }
+  .modal-btns .btn-ok { background:#3f7fbf; color:#fff; }
+  .modal-btns .btn-ok:hover { background:#4a90d9; }
+  .modal-btns .btn-cancel { background:#444; color:#ccc; }
+  .modal-btns .btn-cancel:hover { background:#555; }
 </style>
 </head>
 <body>
@@ -378,7 +408,7 @@ async function checkPw(){
   <div id="tab-team" class="tab-content">
     <div class="info-box">
       <div class="label">Team-Einträge</div>
-      <p>Mit dem Team eingezeichnete Features. JSON an Claude → wird hier als Layer eingebaut.</p>
+      <p>Mit dem Team eingezeichnete Features. JSON exportieren → wird hier als Layer eingebaut.</p>
     </div>
     <div style="margin:6px 0 4px;">
       <button id="btn-labels" onclick="toggleLabels()" style="background:#555;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;width:100%;">🏷️ Shape-Labels einblenden</button>
@@ -930,8 +960,34 @@ const catLabels = {
   nabu:'NABU Aktivitäten'
 };
 
-map.on(L.Draw.Event.CREATED, function(e) {
-  var name = prompt('Name / Beschreibung für dieses Feature:\n(Kategorie: ' + (catLabels[currentCategory]||currentCategory) + ')');
+// ── Custom Modal Dialogs (ersetzt native alert/prompt) ──
+function showAlert(msg) {
+  return new Promise(function(resolve) {
+    var ov = document.createElement('div'); ov.className = 'modal-overlay';
+    ov.innerHTML = '<div class="modal-box"><div class="modal-msg"></div><div class="modal-btns"><button class="btn-ok">OK</button></div></div>';
+    ov.querySelector('.modal-msg').textContent = msg;
+    ov.querySelector('.btn-ok').onclick = function() { document.body.removeChild(ov); resolve(); };
+    ov.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === 'Escape') { document.body.removeChild(ov); resolve(); } });
+    document.body.appendChild(ov);
+    ov.querySelector('.btn-ok').focus();
+  });
+}
+function showPrompt(msg, defaultVal) {
+  return new Promise(function(resolve) {
+    var ov = document.createElement('div'); ov.className = 'modal-overlay';
+    ov.innerHTML = '<div class="modal-box"><div class="modal-msg"></div><input type="text"><div class="modal-btns"><button class="btn-cancel">Abbrechen</button><button class="btn-ok">OK</button></div></div>';
+    ov.querySelector('.modal-msg').textContent = msg;
+    var inp = ov.querySelector('input'); inp.value = defaultVal || '';
+    ov.querySelector('.btn-ok').onclick = function() { document.body.removeChild(ov); resolve(inp.value || null); };
+    ov.querySelector('.btn-cancel').onclick = function() { document.body.removeChild(ov); resolve(null); };
+    inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { document.body.removeChild(ov); resolve(inp.value || null); } else if (e.key === 'Escape') { document.body.removeChild(ov); resolve(null); } });
+    document.body.appendChild(ov);
+    inp.focus();
+  });
+}
+
+map.on(L.Draw.Event.CREATED, async function(e) {
+  var name = await showPrompt('Name / Beschreibung für dieses Feature:\n(Kategorie: ' + (catLabels[currentCategory]||currentCategory) + ')');
   if (name === null) name = 'Unbenannt';
   e.layer._drawLabel = name;
   e.layer._drawCategory = currentCategory;
@@ -953,7 +1009,7 @@ function copyToClipboard(text, successMsg) {
   // Try modern Clipboard API first (fails in iframes without permission)
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function() {
-      alert(successMsg);
+      showAlert(successMsg);
     }).catch(function() { copyFallback(text, successMsg); });
   } else {
     copyFallback(text, successMsg);
@@ -969,7 +1025,7 @@ function copyFallback(text, successMsg) {
   try {
     var ok = document.execCommand('copy');
     document.body.removeChild(ta);
-    if (ok) { alert(successMsg); return; }
+    if (ok) { showAlert(successMsg); return; }
   } catch(e) { document.body.removeChild(ta); }
   // Last resort: show selectable dialog
   showCopyDialog(text);
@@ -999,7 +1055,7 @@ function showCopyDialog(text) {
 
 function copyDrawJSON() {
   const text = document.getElementById('draw-json').textContent;
-  copyToClipboard(text, 'Koordinaten in Zwischenablage kopiert! Einfach an Claude schicken.');
+  copyToClipboard(text, 'Koordinaten in Zwischenablage kopiert! An Nico weiterleiten zur Integration.');
 }
 function clearDrawn() { drawnItems.clearLayers(); updateDrawExport(); }
 
@@ -1051,7 +1107,7 @@ function exportNotePositions() {
     }
   });
   var json = JSON.stringify(notes, null, 2);
-  copyToClipboard(json, 'Notiz-Positionen kopiert (' + notes.length + ' Notizen). Einfach an Claude schicken.');
+  copyToClipboard(json, 'Notiz-Positionen kopiert (' + notes.length + ' Notizen). An Nico weiterleiten zur Integration.');
 }
 
 // ── Text-Notiz: Klick auf Karte platziert ein Textlabel ──
@@ -1061,12 +1117,12 @@ function addTextNote() {
   noteMode = true;
   map.getContainer().style.cursor = 'crosshair';
   // Click direkt auf dem map-Container abfangen — umgeht Shapes die den Click fressen
-  function onNoteClick(e) {
+  async function onNoteClick(e) {
     noteMode = false;
     map.getContainer().style.cursor = '';
     map.getContainer().removeEventListener('click', onNoteClick);
     var ll = map.containerPointToLatLng(L.point(e.offsetX, e.offsetY));
-    var text = prompt('Notiz-Text:');
+    var text = await showPrompt('Notiz-Text:');
     if (!text) return;
     var icon = L.divIcon({ className: '', html: '<div class="map-note">' + text + '</div>', iconSize: null });
     var marker = L.marker(ll, { icon: icon, draggable: true, zIndexOffset: 10000 });
@@ -1185,7 +1241,7 @@ function exportShapefile(mode) {
   }
 
   if (geoFeatures.length === 0) {
-    alert('Keine Shapes ausgewählt.\n\n1. Klick "✋ Auswählen"\n2. Klick auf Shapes um sie zu markieren (weiß)\n3. Klick "📦 Export"');
+    showAlert('Keine Shapes ausgewählt.\n\n1. Klick "✋ Auswählen"\n2. Klick auf Shapes um sie zu markieren (weiß)\n3. Klick "📦 Export"');
     return;
   }
 
@@ -1215,14 +1271,14 @@ function exportShapefile(mode) {
       a.click();
       URL.revokeObjectURL(blobUrl);
       if (geoFeatures.length !== exportSet.features.length) {
-        alert('Shapefile enthält ' + exportSet.features.length + ' ' + typeName + '.\n' +
+        showAlert('Shapefile enthält ' + exportSet.features.length + ' ' + typeName + '.\n' +
           (geoFeatures.length - exportSet.features.length) + ' Features mit anderem Geometrietyp wurden ausgelassen.\n' +
           '(Ein Shapefile kann nur einen Geometrietyp enthalten.)');
       }
       return;
     } catch(err) {
       console.error('Shapefile fehlgeschlagen:', err);
-      alert('Shapefile-Export fehlgeschlagen: ' + err.message + '\n\nFallback: GeoJSON');
+      showAlert('Shapefile-Export fehlgeschlagen: ' + err.message + '\n\nFallback: GeoJSON');
     }
   } else {
     console.error('shpwrite nicht verfügbar:', typeof shpwrite);
@@ -1283,7 +1339,7 @@ function exportMapImage() {
       catBar.style.display = '';
       coords.style.display = '';
       document.querySelectorAll('.leaflet-control-container').forEach(function(el) { el.style.display = ''; });
-      alert('Export fehlgeschlagen: ' + err.message + '\n\nAlternative: Rechtsklick → Screenshot machen');
+      showAlert('Export fehlgeschlagen: ' + err.message + '\n\nAlternative: Rechtsklick → Screenshot machen');
     });
   }, 500); // Kurz warten damit UI sich aktualisiert
 }
