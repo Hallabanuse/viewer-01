@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zukunftslandschaft Heilbronn — Scope-Optionen</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://unpkg.com/shp-write@0.3.2/shpwrite.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #2c3e50; color: #e0e0e0; }
+
+  #map { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+  #panel {
+    position: fixed; top: 0; right: 0; width: 440px; height: 100vh; z-index: 1000;
+    background: rgba(30, 40, 50, 0.95); backdrop-filter: blur(8px);
+    border-left: 1px solid rgba(255,255,255,0.15);
+    overflow-y: auto; padding: 15px 20px 30px;
+    transition: transform 0.3s ease;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+  }
+  #panel.collapsed { transform: translateX(440px); }
+
+  #toggle-panel {
+    position: fixed; top: 10px; right: 450px; z-index: 1001;
+    background: rgba(30, 40, 50, 0.9); color: #eee; border: none;
+    padding: 8px 12px; border-radius: 6px 0 0 6px; cursor: pointer;
+    font-size: 14px; transition: right 0.3s ease;
+  }
+  #toggle-panel.collapsed { right: 10px; border-radius: 6px; }
+
+  h1 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 16px; }
+  h2 { font-size: 13px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin: 18px 0 8px; }
+
+  .option-card {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
+  }
+  .option-card:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+  .option-card.active { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); }
+  .cat-header { cursor:pointer; display:flex; align-items:center; gap:6px; user-select:none; }
+  .cat-header:hover { opacity:0.8; }
+  .cat-toggle { width:14px; height:14px; border-radius:3px; border:1.5px solid #666;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s; margin-left:auto; }
+  .cat-toggle.checked { border-color:#64b5f6; background:rgba(100,180,255,0.2); }
+  .cat-toggle.checked::after { content:'✓'; font-size:10px; color:#64b5f6; }
+  .cat-header .arrow { font-size:10px; transition:transform 0.2s; }
+  .cat-header .arrow.collapsed { transform:rotate(-90deg); }
+  .cat-body { overflow:hidden; transition:max-height 0.2s; }
+  .cat-body.collapsed { max-height:0 !important; }
+  .option-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .option-color { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+  .option-title { font-size: 12px; font-weight: 600; color: #fff; }
+  .option-desc { font-size: 11px; color: #aaa; line-height: 1.4; }
+  .option-pro { color: #81c784; font-size: 10.5px; margin-top: 3px; }
+  .option-contra { color: #ef9a9a; font-size: 10.5px; }
+
+  .feature-item {
+    display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+    border-radius: 6px; cursor: pointer; transition: background 0.2s; margin-bottom: 2px;
+  }
+  .feature-item:hover { background: rgba(255,255,255,0.05); }
+  .feature-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.3); }
+  .feature-rect { width: 14px; height: 10px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.3); border-radius: 2px; }
+  .feature-label { font-size: 11.5px; color: #ccc; }
+  .feature-source { font-size: 9.5px; color: #777; margin-left: auto; font-style: italic; white-space: nowrap; }
+
+  .checkbox { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid #666;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+  .checkbox.checked { border-color: #64b5f6; background: rgba(100,180,255,0.2); }
+  .checkbox.checked::after { content: '✓'; font-size: 10px; color: #64b5f6; }
+
+  .divider { height: 1px; background: rgba(255,255,255,0.08); margin: 14px 0; }
+
+  .info-box {
+    background: rgba(255,193,63,0.08); border: 1px solid rgba(255,193,63,0.2);
+    border-radius: 6px; padding: 10px; margin: 10px 0;
+  }
+  .info-box p { font-size: 11px; color: #ccc; line-height: 1.5; }
+  .info-box .label { color: #ffc03f; font-weight: 600; font-size: 11px; margin-bottom: 4px; }
+
+  .success-box {
+    background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.2);
+    border-radius: 6px; padding: 10px; margin: 10px 0;
+  }
+  .success-box p { font-size: 11px; color: #a5d6a7; line-height: 1.5; }
+  .success-box .label { color: #81c784; font-weight: 600; font-size: 11px; margin-bottom: 4px; }
+
+  .warning-box {
+    background: rgba(229,115,115,0.08); border: 1px solid rgba(229,115,115,0.25);
+    border-radius: 6px; padding: 10px; margin: 10px 0;
+  }
+  .warning-box p { font-size: 10.5px; color: #ef9a9a; line-height: 1.5; }
+  .warning-box .label { color: #e57373; font-weight: 600; font-size: 11px; margin-bottom: 4px; }
+
+  .question-box {
+    background: rgba(100,180,255,0.06); border: 1px solid rgba(100,180,255,0.15);
+    border-radius: 6px; padding: 8px 10px; margin: 5px 0;
+  }
+  .question-box p { font-size: 11px; color: #90caf9; line-height: 1.4; }
+
+  .tab-bar { display: flex; gap: 2px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: #999; transition: all 0.2s;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,0.1); color: #ccc; }
+  .tab-btn.active { background: rgba(100,180,255,0.15); border-color: rgba(100,180,255,0.3); color: #90caf9; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .leaflet-popup-content-wrapper {
+    background: #fff !important; color: #333 !important;
+    border: 2px solid rgba(0,0,0,0.2) !important; border-radius: 8px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+  }
+  .leaflet-popup-tip { background: #fff !important; }
+  .leaflet-popup-content { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 12px; line-height: 1.5; color: #333; }
+  .pop-source { font-size: 10px; color: #888; border-top: 1px solid #eee; margin-top: 6px; padding-top: 4px; font-style: italic; }
+
+  .footer {
+    margin-top: 16px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 10px; color: #555; line-height: 1.5;
+  }
+
+  /* Loading indicator */
+  .loading { font-size: 10px; color: #ffc03f; font-style: italic; display: none; margin-left: 8px; }
+  .loading.active { display: inline; }
+
+  /* Zeichenwerkzeug */
+  #draw-export {
+    display:none; position:fixed; bottom:20px; right:460px;
+    background:rgba(30,40,45,0.95); color:#eee; padding:12px 16px;
+    border-radius:8px; z-index:2000; max-width:420px; max-height:40vh;
+    overflow-y:auto; font-size:12px; backdrop-filter:blur(8px);
+  }
+  #draw-export pre {
+    background:#1a1a2e; padding:10px; border-radius:4px; font-size:11px;
+    line-height:1.4; overflow-x:auto; white-space:pre-wrap; word-break:break-all;
+    margin:8px 0; max-height:30vh; overflow-y:auto;
+  }
+  #draw-export button {
+    background:#43a047; color:#fff; border:none; padding:6px 14px;
+    border-radius:4px; cursor:pointer; margin:4px 4px 4px 0; font-size:12px;
+  }
+  #draw-export button:hover { background:#4caf50; }
+  #draw-export button.danger { background:#c62828; }
+  #draw-export .count { color:#81c784; font-weight:bold; }
+  /* Kategorie-Picker — links unter den Zeichentools */
+  #category-bar {
+    position:fixed; top:380px; left:10px;
+    display:flex; flex-direction:column; gap:3px; z-index:1500;
+    background:rgba(30,40,45,0.92);
+    padding:6px 8px; border-radius:6px; backdrop-filter:blur(8px);
+    max-width:140px;
+  }
+  .cat-btn {
+    padding:4px 8px; border-radius:4px; font-size:10px; font-weight:600;
+    cursor:pointer; border:2px solid transparent; color:#fff; opacity:0.6;
+    transition:all 0.2s; text-align:left;
+  }
+  .cat-btn:hover { opacity:0.85; }
+  .cat-btn.active { opacity:1; border-color:#fff; }
+  #coords-display {
+    position:fixed; bottom:8px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.7); color:#eee; padding:4px 12px;
+    border-radius:4px; font-size:11px; z-index:1500; font-family:monospace;
+  }
+  /* Shape-Labels */
+  .shape-label { font-size:14px; font-weight:600; padding:2px 5px; background:rgba(255,255,255,0.85);
+    border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.3); white-space:nowrap; }
+  /* Text-Notizen auf der Karte */
+  .map-note {
+    background: rgba(55,55,55,0.92); color:#fff; padding:4px 8px;
+    border-radius:4px; font-size:14px; font-weight:700; white-space:nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3); border:1px solid #888;
+    font-family:'Segoe UI',sans-serif;
+  }
+  /* Export-Buttons (rechts oben) */
+  .export-bar {
+    position:fixed; top:10px; right:500px; z-index:1500;
+    display:flex; gap:4px; transition:right 0.3s;
+  }
+  .export-bar.panel-collapsed { right:50px; }
+  .export-btn {
+    background:rgba(30,40,45,0.9); color:#eee; border:none;
+    padding:6px 12px; border-radius:6px; cursor:pointer;
+    font-size:12px; backdrop-filter:blur(8px);
+  }
+  .export-btn:hover { background:rgba(50,60,65,0.95); }
+  .export-btn.busy { opacity:0.5; cursor:wait; }
+  .export-btn.active-mode { background:#1565c0; color:#fff; }
+  #map.select-mode { cursor:pointer !important; }
+  #screenshot-btn {
+    position:fixed; bottom:40px; left:10px; z-index:1500;
+    background:rgba(30,40,45,0.92); color:#fff; border:none;
+    padding:8px 12px; border-radius:6px; cursor:pointer; font-size:12px;
+    backdrop-filter:blur(8px);
+  }
+  #screenshot-btn:hover { background:rgba(50,60,65,0.95); }
+  #screenshot-btn.busy { opacity:0.5; cursor:wait; }
+  /* Basiskarte etwas blasser damit Shapes hervorstechen */
+  .leaflet-tile-pane { opacity: 0.6; }
+  /* Gut sichtbarer Cursor für Online-Meetings */
+  #map { cursor: none; }
+  #custom-cursor {
+    position:fixed; pointer-events:none; z-index:9999;
+    width:28px; height:28px; border-radius:50%;
+    border:3px solid #ff1744; background:rgba(255,23,68,0.25);
+    transform:translate(-14px,-14px); display:none;
+  }
+  /* Force Weinlagen WMS tiles to uniform brown color */
+  .weinlagen-mono img {
+    filter: saturate(0) sepia(1) hue-rotate(340deg) saturate(1.5) brightness(0.85);
+  }
+  /* Make Natura 2000 more visible — shift to teal, increase contrast */
+  .natura2000-highlight img {
+    filter: saturate(1.8) brightness(1.1) contrast(1.2);
+  }
+</style>
+</head>
+<body>
+
+<!-- Password Gate -->
+<div id="pw-gate" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;
+  background:#1a2530;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+  <div style="text-align:center;max-width:360px;padding:30px;">
+    <div style="font-size:36px;margin-bottom:16px;">🗺️</div>
+    <h1 style="font-size:20px;color:#fff;margin-bottom:6px;">Zukunftslandschaft Heilbronn</h1>
+    <p style="font-size:13px;color:#888;margin-bottom:24px;">Zugang nur für Projektbeteiligte</p>
+    <input id="pw-input" type="password" placeholder="Passwort eingeben"
+      style="width:100%;padding:12px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);
+      background:rgba(255,255,255,0.08);color:#fff;font-size:14px;outline:none;text-align:center;"
+      onkeydown="if(event.key==='Enter')checkPw()">
+    <button onclick="checkPw()"
+      style="margin-top:12px;width:100%;padding:12px;border-radius:8px;border:none;
+      background:#1565c0;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Öffnen</button>
+    <p id="pw-error" style="color:#ef5350;font-size:12px;margin-top:10px;display:none;">Falsches Passwort</p>
+  </div>
+</div>
+<script>
+async function hashStr(s){const e=new TextEncoder().encode(s);const h=await crypto.subtle.digest('SHA-256',e);return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+async function checkPw(){
+  const v=document.getElementById('pw-input').value;
+  const h=await hashStr(v);
+  if(h==='86be934c8f965d1084bdba22c73230f5ba061955cb08646a79dfeefb09006739'){document.getElementById('pw-gate').style.display='none';}
+  else{document.getElementById('pw-error').style.display='block';document.getElementById('pw-input').value='';document.getElementById('pw-input').focus();}
+}
+</script>
+
+<div id="map"></div>
+<div id="custom-cursor"></div>
+<div id="category-bar">
+  <div class="cat-btn active" style="background:#1565c0;" onclick="setCategory('scope','#1565c0',this)">Scope / Rahmen</div>
+  <div class="cat-btn" style="background:#4caf50;" onclick="setCategory('schutzobjekt','#4caf50',this)">Schutzobjekte/-gebiete</div>
+  <div class="cat-btn" style="background:#d32f2f;" onclick="setCategory('bedrohung','#d32f2f',this)">Bedrohungen</div>
+  <div class="cat-btn" style="background:#c6a700;" onclick="setCategory('nabu','#c6a700',this)">NABU Aktivitäten</div>
+  <div class="cat-btn" style="background:#555; border:1px solid #888; color:#fff;" onclick="addTextNote()">📝 Notiz</div>
+</div>
+<div class="export-bar" id="export-bar">
+  <button class="export-btn" id="screenshot-btn" onclick="takeScreenshot()">📷 PNG</button>
+  <button class="export-btn" id="select-mode-btn" onclick="toggleSelectMode()">✋ Auswählen</button>
+  <button class="export-btn" id="export-selected-btn" onclick="exportShapefile('selected')" style="display:none;">📦 Export (<span id="select-count">0</span>)</button>
+  <button class="export-btn" id="clear-selection-btn" onclick="clearSelection()" style="display:none;">✕</button>
+</div>
+<div id="coords-display">Maus bewegen für Koordinaten</div>
+<div id="draw-export">
+  <strong>Gezeichnete Features</strong> — <span id="draw-count" class="count">0</span> Objekte
+  <pre id="draw-json" style="display:none;"></pre>
+  <button onclick="copyDrawJSON()">In Zwischenablage kopieren</button>
+  <button onclick="clearDrawn()" class="danger">Alle löschen</button>
+</div>
+
+<button id="toggle-panel" onclick="togglePanel()">&#9776;</button>
+<div id="panel">
+
+  <h1>Zukunftslandschaft Heilbronn</h1>
+  <div class="subtitle">Arbeitskarte — Geodaten &amp; Team-Einträge</div>
+
+  <div class="tab-bar">
+    <div class="tab-btn active" onclick="showTab('geodata')">Geodaten</div>
+    <div class="tab-btn" onclick="showTab('team')">Team-Einträge</div>
+  </div>
+
+  <!-- TAB: Geodaten (real WMS layers) -->
+  <div id="tab-geodata" class="tab-content active">
+
+    <h2>Administrative Grenzen</h2>
+    <div class="feature-item" onclick="toggleFeature('kreise')">
+      <div class="checkbox checked" id="check-kreise"></div>
+      <div class="feature-rect" style="background: transparent; border-color: #666;"></div>
+      <div class="feature-label">Kreisgrenzen (amtlich)</div>
+      <div class="feature-source">GeoJSON</div>
+    </div>
+
+    <h2>Schutzobjekte/-gebiete (echte Daten)</h2>
+
+    <div class="feature-item" onclick="toggleFeature('streuobst')">
+      <div class="checkbox" id="check-streuobst"></div>
+      <div class="feature-dot" style="background: rgba(76,175,80,0.7); border-color: #2e7d32;"></div>
+      <div class="feature-label">Streuobstwiesen</div>
+      <div class="feature-source">LUBW WMS</div>
+    </div>
+
+    <div class="feature-item" onclick="toggleFeature('weinlagen')">
+      <div class="checkbox" id="check-weinlagen"></div>
+      <div class="feature-rect" style="background: rgba(121,85,72,0.5); border-color: #5d4037;"></div>
+      <div class="feature-label">Weinbaulagen (Einzellagen) <span style="color:#ffc03f;font-size:9px">⚠ ab Zoom 10</span></div>
+      <div class="feature-source">LGRB WMS</div>
+    </div>
+
+    <div class="feature-item" onclick="toggleFeature('gewaesser')">
+      <div class="checkbox" id="check-gewaesser"></div>
+      <div class="feature-rect" style="background: rgba(33,150,243,0.5); border-color: #1976d2;"></div>
+      <div class="feature-label">Fließgewässer (AWGN) <span style="color:#ffc03f;font-size:9px">⚠ ab Zoom 15</span></div>
+      <div class="feature-source">LUBW WMS</div>
+    </div>
+
+    <div class="feature-item" onclick="toggleFeature('biotope')">
+      <div class="checkbox" id="check-biotope"></div>
+      <div class="feature-dot" style="background: rgba(156,204,101,0.6); border-color: #558b2f;"></div>
+      <div class="feature-label">Gesetzlich geschützte Biotope <span style="color:#ffc03f;font-size:9px">⚠ ab Zoom 12</span></div>
+      <div class="feature-source">LUBW WMS</div>
+    </div>
+
+    <h2>Schutzgebiete</h2>
+
+    <div class="feature-item" onclick="toggleFeature('natura2000')">
+      <div class="checkbox" id="check-natura2000"></div>
+      <div class="feature-rect" style="background: rgba(0,150,136,0.5); border-color: #00897b;"></div>
+      <div class="feature-label">Natura 2000 (FFH + SPA)</div>
+      <div class="feature-source">LUBW WMS</div>
+    </div>
+
+    <div class="feature-item" onclick="toggleFeature('nsg')">
+      <div class="checkbox" id="check-nsg"></div>
+      <div class="feature-rect" style="background: rgba(183,28,28,0.3); border-color: #b71c1c;"></div>
+      <div class="feature-label">Naturschutzgebiete (NSG)</div>
+      <div class="feature-source">LUBW WMS</div>
+    </div>
+
+    <div class="feature-item" onclick="toggleFeature('lsg')">
+      <div class="checkbox" id="check-lsg"></div>
+      <div class="feature-rect" style="background: rgba(129,199,132,0.3); border-color: #388e3c;"></div>
+      <div class="feature-label">Landschaftsschutzgebiete (LSG)</div>
+      <div class="feature-source">LUBW WMS</div>
+    </div>
+
+    <h2>Landnutzung</h2>
+
+    <div class="feature-item" onclick="toggleFeature('corine')">
+      <div class="checkbox" id="check-corine"></div>
+      <div class="feature-rect" style="background: rgba(156,39,176,0.3); border-color: #7b1fa2;"></div>
+      <div class="feature-label">CORINE Land Cover 2018</div>
+      <div class="feature-source">EEA WMS</div>
+    </div>
+
+    <div class="info-box" style="margin-top: 10px;">
+      <div class="label">Tipp</div>
+      <p>CORINE zeigt die grobe Landnutzung (Wald, Acker, Siedlung, Weinbau, Grünland). Hilft beim Verständnis der 4R-Zonen. Am besten auf Satellit-Basemap schalten und dann CORINE darüberlegen.</p>
+    </div>
+
+    <div class="warning-box" style="margin-top: 6px;">
+      <div class="label">Zoom-Hinweis</div>
+      <p>Einige Layer haben serverseitige Maßstabsbeschränkungen: <strong>Fließgewässer</strong> erst ab Zoomstufe ~15 sichtbar (1:10.000-Datensatz), <strong>Biotope</strong> ab ~Zoom 12. <strong>Streuobst</strong>, <strong>Weinlagen</strong> und <strong>Schutzgebiete</strong> sind auch bei Übersichtszoom sichtbar.</p>
+    </div>
+  </div>
+
+  <!-- TAB: Team-Einträge (wird nach und nach mit User-Input gefüllt) -->
+  <div id="tab-team" class="tab-content">
+    <div class="info-box">
+      <div class="label">Team-Einträge</div>
+      <p>Mit dem Team eingezeichnete Features. JSON an Claude → wird hier als Layer eingebaut.</p>
+    </div>
+    <div style="margin:6px 0 4px;">
+      <button id="btn-labels" onclick="toggleLabels()" style="background:#555;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;width:100%;">🏷️ Shape-Labels einblenden</button>
+    </div>
+
+    <div class="cat-header">
+      <span class="arrow" id="arrow-cat-scope" onclick="toggleCat('cat-scope')">▼</span>
+      <h2 style="color:#1565c0; margin:0; flex:1;" onclick="toggleCat('cat-scope')">Scope / Rahmen</h2>
+      <div class="cat-toggle" id="cattgl-scope" onclick="toggleCatLayers('scope',['team_scope_gesamt'])"></div>
+    </div>
+    <div class="cat-body" id="cat-scope" style="max-height:500px;">
+      <div class="feature-item" onclick="toggleFeature('team_scope_gesamt')">
+        <div class="checkbox" id="check-team_scope_gesamt"></div>
+        <div class="feature-dot" style="background:#1565c0; border-color:#0d47a1;"></div>
+        <div class="feature-label">Landschaftsrahmen Gesamt</div>
+      </div>
+    </div>
+
+    <div class="cat-header">
+      <span class="arrow" id="arrow-cat-schutzobjekt" onclick="toggleCat('cat-schutzobjekt')">▼</span>
+      <h2 style="color:#4caf50; margin:0; flex:1;" onclick="toggleCat('cat-schutzobjekt')">Schutzobjekte/-gebiete</h2>
+      <div class="cat-toggle" id="cattgl-schutzobjekt" onclick="toggleCatLayers('schutzobjekt',['team_nachtigalleninsel','team_weinbergsbrachen','team_rebhuhngebiete','team_potenz_rebhuhn','team_rastplatz','team_feuchtgebiet'])"></div>
+    </div>
+    <div class="cat-body" id="cat-schutzobjekt" style="max-height:500px;">
+      <div class="feature-item" onclick="toggleFeature('team_nachtigalleninsel')">
+        <div class="checkbox" id="check-team_nachtigalleninsel"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Nachtigalleninsel</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_weinbergsbrachen')">
+        <div class="checkbox" id="check-team_weinbergsbrachen"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Rebflächen/Weinbergsbrachen (4)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_rebhuhngebiete')">
+        <div class="checkbox" id="check-team_rebhuhngebiete"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Rebhuhngebiete (4)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_potenz_rebhuhn')">
+        <div class="checkbox" id="check-team_potenz_rebhuhn"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Potentielles Rebhuhnhabitat</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_rastplatz')">
+        <div class="checkbox" id="check-team_rastplatz"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Rastplatz Migrierende Vogelart</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_feuchtgebiet')">
+        <div class="checkbox" id="check-team_feuchtgebiet"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Feuchtgebiet</div>
+      </div>
+    </div>
+
+    <div class="cat-header">
+      <span class="arrow" id="arrow-cat-bedrohung" onclick="toggleCat('cat-bedrohung')">▼</span>
+      <h2 style="color:#d32f2f; margin:0; flex:1;" onclick="toggleCat('cat-bedrohung')">Bedrohungen</h2>
+      <div class="cat-toggle" id="cattgl-bedrohung" onclick="toggleCatLayers('bedrohung',['team_windkraft'])"></div>
+    </div>
+    <div class="cat-body" id="cat-bedrohung" style="max-height:500px;">
+      <div class="feature-item" onclick="toggleFeature('team_windkraft')">
+        <div class="checkbox" id="check-team_windkraft"></div>
+        <div class="feature-dot" style="background:#d32f2f; border-color:#b71c1c;"></div>
+        <div class="feature-label">Windkraftentwicklung (2)</div>
+      </div>
+    </div>
+
+    <div class="cat-header">
+      <span class="arrow" id="arrow-cat-nabu" onclick="toggleCat('cat-nabu')">▼</span>
+      <h2 style="color:#c6a700; margin:0; flex:1;" onclick="toggleCat('cat-nabu')">NABU Aktivitäten</h2>
+      <div class="cat-toggle" id="cattgl-nabu" onclick="toggleCatLayers('nabu',['team_nabu_nachtigalleninsel','team_nabu_gruppen','team_rebhuhnarbeit','team_green_capital'])"></div>
+    </div>
+    <div class="cat-body" id="cat-nabu" style="max-height:500px;">
+      <div class="feature-item" onclick="toggleFeature('team_nabu_nachtigalleninsel')">
+        <div class="checkbox" id="check-team_nabu_nachtigalleninsel"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">Nachtigalleninsel NABU Flächen (2)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_nabu_gruppen')">
+        <div class="checkbox" id="check-team_nabu_gruppen"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">NABU Büro + Gruppen (15)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_rebhuhnarbeit')">
+        <div class="checkbox" id="check-team_rebhuhnarbeit"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">Rebhuhnarbeit mit Landwirten (3)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_green_capital')">
+        <div class="checkbox" id="check-team_green_capital"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">Green Capital City Projekt</div>
+      </div>
+    </div>
+
+    <div class="cat-header">
+      <span class="arrow" id="arrow-cat-notizen" onclick="toggleCat('cat-notizen')">▼</span>
+      <h2 style="color:#999; margin:0; flex:1;" onclick="toggleCat('cat-notizen')">Notizen</h2>
+      <div class="cat-toggle" id="cattgl-notizen" onclick="toggleCatLayers('notizen',['team_notizen','team_notiz_lvwo'])"></div>
+    </div>
+    <div class="cat-body" id="cat-notizen" style="max-height:300px;">
+      <div class="feature-item" onclick="toggleFeature('team_notizen')">
+        <div class="checkbox" id="check-team_notizen"></div>
+        <div class="feature-dot" style="background:#555; border-color:#888;"></div>
+        <div class="feature-label">Landkreis-Beschriftungen (3)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_notiz_lvwo')">
+        <div class="checkbox" id="check-team_notiz_lvwo"></div>
+        <div class="feature-dot" style="background:#555; border-color:#888;"></div>
+        <div class="feature-label">LVWO Weinsberg (Anderer Akteur)</div>
+      </div>
+      <div style="margin:6px 0;">
+        <button onclick="exportNotePositions()" style="background:#555;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:10px;width:100%;">📋 Aktuelle Notiz-Positionen kopieren</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Arbeitskarte · Zukunftslandschaft Heilbronn · FOS Europe / NABU · März 2026<br>
+    Geodaten: LUBW, LGRB, EEA/Copernicus (WMS).<br>
+    Hintergrundkarten: OpenStreetMap (DE) / ESRI / OpenTopoMap / Maps4BW
+  </div>
+</div>
+
+<script>
+const map = L.map('map', { center: [49.15, 9.22], zoom: 10, zoomControl: false, preferCanvas: true });
+L.control.zoom({ position: 'topleft' }).addTo(map);
+
+// ============ BASE LAYERS ============
+const osmDE = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> (DE)', maxZoom: 19
+});
+const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: '&copy; Esri', maxZoom: 18
+});
+const cartoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+  subdomains: 'abcd', maxZoom: 19, pane: 'overlayPane'
+});
+const satellite = L.layerGroup([esriSat, cartoLabels]);
+const openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenTopoMap', maxZoom: 17
+});
+const maps4bw = L.tileLayer.wms('https://owsproxy.lgl-bw.de/owsproxy/ows/WMS_Maps4BW', {
+  layers: 'Maps4BW', format: 'image/png', transparent: false, version: '1.3.0',
+  attribution: '&copy; LGL BW'
+});
+
+osmDE.addTo(map);
+L.control.layers({
+  'OpenStreetMap (DE)': osmDE,
+  'Satellit (ESRI)': satellite,
+  'Topographisch': openTopo,
+  'Maps4BW (LGL)': maps4bw
+}, null, { position: 'topleft', collapsed: true }).addTo(map);
+
+// ============ REAL GEODATA LAYERS (WMS) ============
+const featureLayers = {};
+
+// All LUBW WMS services require styles='' parameter!
+const lubwBase = 'https://rips-gdi.lubw.baden-wuerttemberg.de/arcgis/services';
+const lubwOpts = { format: 'image/png', transparent: true, version: '1.3.0', styles: '' };
+
+// Streuobstwiesen — LUBW remote sensing (2015-18)
+featureLayers.streuobst = L.tileLayer.wms(lubwBase + '/wms/Streuobsterhebung_Fernerkundung/MapServer/WMSServer', {
+  ...lubwOpts, layers: '0', opacity: 0.85, attribution: '&copy; LUBW Streuobsterhebung'
+});
+
+// Weinbaulagen — LGRB Weinbauatlas (uses WMS 1.1.1, parent layer with scale-dependent sub-layers)
+// CSS class 'weinlagen-mono' applies filter to make all tiles uniform brown
+featureLayers.weinlagen = L.tileLayer.wms('https://services.lgrb-bw.de/index.phtml?SERVICE_NAME=lgrb_weinbauatlas', {
+  layers: 'p228_lagen_cl', format: 'image/png', transparent: true, version: '1.1.1', styles: '', opacity: 0.7,
+  minZoom: 10,
+  className: 'weinlagen-mono',
+  attribution: '&copy; LGRB BW Weinbauatlas'
+});
+
+// Fließgewässer — LUBW AWGN 1:10.000
+featureLayers.gewaesser = L.tileLayer.wms(lubwBase + '/wms/UIS_0100000001500001/MapServer/WMSServer', {
+  ...lubwOpts, layers: '0', opacity: 0.8, attribution: '&copy; LUBW AWGN'
+});
+
+// Biotopkartierung — LUBW §30 geschützte Biotope
+featureLayers.biotope = L.tileLayer.wms(lubwBase + '/wms/UIS_0100000030200001/MapServer/WMSServer', {
+  ...lubwOpts, layers: '0', opacity: 0.7, attribution: '&copy; LUBW Biotopkartierung'
+});
+
+// Schutzgebiete — all via LUBW INSPIRE (BfN is 403 blocked)
+const lubwSG = lubwBase + '/GDI/INSPIRE_Schutzgebiete/MapServer/WMSServer';
+
+// Natura 2000 (FFH + SPA) — increased opacity + CSS class for visibility
+featureLayers.natura2000 = L.tileLayer.wms(lubwSG, {
+  ...lubwOpts, layers: 'PS.ProtectedSite.FFH,PS.ProtectedSite.SPA', opacity: 0.7,
+  className: 'natura2000-highlight',
+  attribution: '&copy; LUBW INSPIRE Schutzgebiete'
+});
+
+// Naturschutzgebiete (NSG)
+featureLayers.nsg = L.tileLayer.wms(lubwSG, {
+  ...lubwOpts, layers: 'PS.ProtectedSite.NSG', opacity: 0.6,
+  attribution: '&copy; LUBW INSPIRE Schutzgebiete'
+});
+
+// Landschaftsschutzgebiete (LSG)
+featureLayers.lsg = L.tileLayer.wms(lubwSG, {
+  ...lubwOpts, layers: 'PS.ProtectedSite.LSG', opacity: 0.4,
+  attribution: '&copy; LUBW INSPIRE Schutzgebiete'
+});
+
+// CORINE Land Cover 2018 — EEA/Copernicus
+featureLayers.corine = L.tileLayer.wms('https://image.discomap.eea.europa.eu/arcgis/services/Corine/CLC2018_WM/MapServer/WMSServer', {
+  layers: '12', format: 'image/png', transparent: true, version: '1.3.0', styles: '', opacity: 0.55,
+  attribution: '&copy; EEA Copernicus CORINE 2018'
+});
+
+// ============ SCHEMATIC LAYERS (estimated, not WMS) ============
+
+// Siedlungsdruck
+featureLayers.pressure = L.layerGroup([
+  L.circle([49.15,9.22], { radius: 4500, color: '#c62828', weight: 2, dashArray: '8,5', fillColor: '#e53935', fillOpacity: 0.10, interactive: false }),
+  L.circle([49.19,9.23], { radius: 2800, color: '#c62828', weight: 2, dashArray: '8,5', fillColor: '#e53935', fillOpacity: 0.10, interactive: false }),
+  L.marker([49.19,9.27], { icon: L.divIcon({ className: '', html: '<div style="color:#d32f2f;font-size:10px;font-weight:700;text-shadow:0 0 6px #fff,0 0 12px #fff,0 0 4px #fff">Audi / Neckarsulm</div>', iconSize: [100,14] }), interactive: false }),
+  L.marker([49.145,9.29], { icon: L.divIcon({ className: '', html: '<div style="color:#d32f2f;font-size:10px;font-weight:700;text-shadow:0 0 6px #fff,0 0 12px #fff,0 0 4px #fff">Kaufland/Lidl HQ</div>', iconSize: [90,14] }), interactive: false }),
+]);
+
+// NABU Projekte
+featureLayers.projekte = L.layerGroup([
+  L.circleMarker([49.073,9.146], { radius: 8, color: '#fff', weight: 2.5, fillColor: '#4caf50', fillOpacity: 0.9 })
+    .bindPopup('<strong>Nachtigalleninsel Lauffen</strong><br>Flaggschiff-Naturschutzprojekt. Auenrenaturierung.<div class="pop-source">Quelle: NABU-Steckbrief</div>'),
+  L.circleMarker([49.142,9.210], { radius: 6, color: '#fff', weight: 2, fillColor: '#78909c', fillOpacity: 0.9 })
+    .bindPopup('<strong>Heilbronn</strong><br>NABU-Bezirksgeschäftsstelle.<div class="pop-source">NABU-Steckbrief</div>'),
+  L.circleMarker([49.083,9.067], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#ffc107', fillOpacity: 0.9 })
+    .bindPopup('<strong>Brackenheim</strong><br>Biotopverbundsplanung (Pilotprojekt).<div class="pop-source">NABU-Steckbrief</div>'),
+  L.circleMarker([49.05,9.30], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#4caf50', fillOpacity: 0.9 })
+    .bindPopup('<strong>Steinkauz-Streuobstwiesen</strong><br>Schwerpunktgebiet. Bio-Apfelsaft-Marke.<div class="pop-source">NABU-Steckbrief</div>'),
+  L.circleMarker([49.230,9.162], { radius: 5, color: '#fff', weight: 2, fillColor: '#78909c', fillOpacity: 0.8 })
+    .bindPopup('<strong>Bad Wimpfen</strong><br>Nördl. Grenze Neckartalkorridor.<div class="pop-source">Allgemeinwissen</div>'),
+  L.circleMarker([49.192,9.224], { radius: 5, color: '#fff', weight: 2, fillColor: '#e53935', fillOpacity: 0.8 })
+    .bindPopup('<strong>Neckarsulm</strong><br>AUDI-Standort. Flächenverbrauch.<div class="pop-source">Allgemeinwissen</div>'),
+  L.circleMarker([49.150,9.283], { radius: 5, color: '#fff', weight: 2, fillColor: '#795548', fillOpacity: 0.8 })
+    .bindPopup('<strong>Weinsberg</strong><br>Staatl. Lehr- u. Versuchsanstalt Wein/Obstbau.<div class="pop-source">Allgemeinwissen</div>'),
+  L.circleMarker([49.200,9.500], { radius: 5, color: '#fff', weight: 1.5, fillColor: '#9e9e9e', fillOpacity: 0.6 })
+    .bindPopup('<strong>Öhringen</strong><br>Hohenlohekreis. Scope-Frage.<div class="pop-source">Allgemeinwissen</div>'),
+  L.circleMarker([49.283,9.683], { radius: 5, color: '#fff', weight: 1.5, fillColor: '#9e9e9e', fillOpacity: 0.6 })
+    .bindPopup('<strong>Künzelsau</strong><br>Hohenlohekreis. Würth.<div class="pop-source">Allgemeinwissen</div>'),
+  L.circleMarker([49.30,9.60], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#ffc107', fillOpacity: 0.9 })
+    .bindPopup('<strong>F.R.A.N.Z.-Betrieb</strong><br>Modellbetrieb Landwirtschaft & Naturschutz.<div class="pop-source">NABU-Steckbrief</div>'),
+  L.circleMarker([49.22,9.02], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#ffeb3b', fillOpacity: 0.9 })
+    .bindPopup('<strong>Rebhuhn-Gebiet (vermutlich)</strong><br>Lage muss mit Team geklärt werden!<div class="pop-source">Geschätzt</div>'),
+]);
+
+// ============ KREISGRENZEN (GeoJSON) ============
+// GeoJSON uses NAME_3 property (not AGS)
+// NAME_3 values: 'Heilbronn city Städte' (SK), 'Heilbronn' (LK), 'Hohenlohe' (Hohenlohekreis)
+featureLayers.kreise = L.layerGroup();
+let kreiseGeoJSON = null;
+
+const nameFilter = ['Heilbronn city Städte', 'Heilbronn', 'Hohenlohe'];
+const matchesFilter = f => f.properties.NAME_3 && nameFilter.includes(f.properties.NAME_3);
+
+fetch('https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/4_kreise/3_mittel.geo.json')
+  .then(r => r.json())
+  .then(data => {
+    kreiseGeoJSON = L.geoJSON(data, {
+      filter: matchesFilter,
+      style: { color: '#e65100', weight: 3, fillOpacity: 0, dashArray: '8,6' },
+      onEachFeature: (f, layer) => {
+        const name = f.properties.NAME_3;
+        const type = f.properties.TYPE_3 || '';
+        layer.bindPopup('<strong>' + name + '</strong><br>' + type);
+      }
+    });
+    featureLayers.kreise.addLayer(kreiseGeoJSON);
+    featureLayers.kreise.addTo(map);
+
+  })
+  .catch(err => {
+    console.warn('Kreisgrenzen konnten nicht geladen werden:', err);
+  });
+
+// ============ TEAM-EINTRÄGE (vom Nutzer gezeichnet) ============
+featureLayers.team_nachtigalleninsel = L.polygon([
+  [49.079081,9.159722],[49.079165,9.158907],[49.079165,9.158285],[49.07932,9.157813],
+  [49.079306,9.156997],[49.079151,9.156353],[49.078785,9.155881],[49.078167,9.155774],
+  [49.077535,9.15556],[49.077057,9.15571],[49.076438,9.156032],[49.075904,9.156525],
+  [49.075468,9.157212],[49.074948,9.157877],[49.074372,9.158478],[49.07395,9.159164],
+  [49.073739,9.159787],[49.073346,9.160538],[49.074161,9.159422],[49.075103,9.158242],
+  [49.075904,9.157383],[49.076537,9.157126],[49.077225,9.156911],[49.077844,9.157147],
+  [49.078209,9.157856],[49.078575,9.158735]
+], { color:'#4caf50', weight:2, fillColor:'#4caf50', fillOpacity:0.20 })
+.bindPopup('<strong>Nachtigalleninsel</strong><br><em style="color:#4caf50;">Schutzobjekt/-gebiet</em><br><span style="font-size:10px;color:#999;">Vom Team auf Karte gezeichnet</span>');
+
+featureLayers.team_nabu_nachtigalleninsel = L.layerGroup([
+  L.polygon([
+    [49.077886,9.155635],[49.0779,9.157319],[49.079313,9.157341],[49.079298,9.156986],
+    [49.0792,9.156547],[49.079102,9.156278],[49.07894,9.15601],[49.078708,9.155838],
+    [49.078399,9.155731]
+  ], { color:'#c6a700', weight:2, fillColor:'#c6a700', fillOpacity:0.20 })
+  .bindPopup('<strong>Nachtigalleninsel NABU Fläche 1</strong><br><em style="color:#c6a700;">NABU Aktivitäten</em>'),
+  L.polygon([
+    [49.075929,9.156552],[49.076031,9.157319],[49.075637,9.157582],
+    [49.075528,9.157255],[49.075535,9.157067]
+  ], { color:'#c6a700', weight:2, fillColor:'#c6a700', fillOpacity:0.20 })
+  .bindPopup('<strong>Nachtigalleninsel NABU Fläche 2</strong><br><em style="color:#c6a700;">NABU Aktivitäten</em>')
+]);
+
+// ── Scope (blau) ──
+featureLayers.team_scope_gesamt = L.polygon([[49.023461,8.905792],[49.018508,8.952484],[49.010402,9.102859],[49.0077,9.213409],[49.004547,9.326706],[49.014906,9.416656],[49.037868,9.50386],[49.078814,9.606857],[49.10804,9.673462],[49.14758,9.718094],[49.177664,9.757919],[49.214906,9.808044],[49.254361,9.851303],[49.28214,9.876709],[49.339441,9.893188],[49.385949,9.878769],[49.408293,9.84375],[49.433306,9.810791],[49.489985,9.713287],[49.502472,9.672775],[49.504255,9.619904],[49.440003,9.540253],[49.41142,9.501114],[49.398909,9.387817],[49.3931,9.29306],[49.351967,9.181824],[49.312142,9.113159],[49.309904,9.055481],[49.301397,8.974457],[49.268701,8.941498],[49.229705,8.860474],[49.218943,8.797302],[49.17901,8.76915],[49.128263,8.77533],[49.073866,8.800049],[49.039668,8.823395]],
+  {color:'#1565c0',weight:3,fillColor:'#1565c0',fillOpacity:0.06,dashArray:'10,6',interactive:false});
+
+// ── Schutzobjekte (grün) ──
+featureLayers.team_weinbergsbrachen = L.layerGroup([
+  L.polygon([[49.11186,9.141312],[49.117029,9.102173],[49.120175,9.028358],[49.113434,8.979607],[49.09163,8.957291],[49.04777,8.956604],[49.027289,9.005356],[49.025037,9.061661],[49.031791,9.094276],[49.05587,9.137192],[49.083311,9.166031],[49.091405,9.166374]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.15}).bindPopup('<strong>Rebflächen/Weinbergsbrachen (West)</strong>'),
+  L.polygon([[49.041131,9.18457],[49.05317,9.138393],[49.066331,9.135475],[49.095677,9.169636],[49.114445,9.202251],[49.132307,9.238815],[49.142415,9.246025],[49.155215,9.230919],[49.160155,9.233322],[49.158695,9.262505],[49.131408,9.285507],[49.109501,9.291],[49.092642,9.264221],[49.073641,9.236412],[49.049008,9.200535]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.15}).bindPopup('<strong>Rebflächen/Weinbergsbrachen (Mitte)</strong>'),
+  L.polygon([[49.069255,9.295635],[49.056883,9.277954],[49.033029,9.262505],[49.023687,9.270744],[49.009389,9.340267],[49.01727,9.3643],[49.03044,9.382324],[49.046307,9.391251],[49.058907,9.388161],[49.070605,9.357262],[49.073529,9.331341]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.15}).bindPopup('<strong>Rebflächen/Weinbergsbrachen (Ost)</strong>'),
+  L.polygon([[49.160379,9.263535],[49.1679,9.274521],[49.169022,9.305077],[49.170818,9.335289],[49.167563,9.378548],[49.157909,9.393997],[49.143089,9.403267],[49.131521,9.398804],[49.127028,9.379749],[49.124332,9.355373],[49.119838,9.338379],[49.124107,9.295292],[49.134216,9.283104],[49.150949,9.270058]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.15}).bindPopup('<strong>Rebflächen/Weinbergsbrachen (Nord)</strong>'),
+]);
+
+featureLayers.team_rebhuhngebiete = L.layerGroup([
+  L.polygon([[49.072741,9.143543],[49.104219,9.175472],[49.137137,9.187489],[49.164084,9.195385],[49.178449,9.19487],[49.182601,9.171009],[49.177439,9.077282],[49.159481,8.968792],[49.138597,8.922615],[49.111411,8.973255],[49.089494,9.037971],[49.073753,9.093075],[49.069255,9.122257]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.12,dashArray:'6,4'}).bindPopup('<strong>Rebhuhngebiet (Heilbronn Kerngebiet)</strong>'),
+  L.polygon([[49.407064,9.613123],[49.405835,9.60969],[49.404439,9.607716],[49.39863,9.608231],[49.392374,9.611921],[49.386675,9.616213],[49.386619,9.626427],[49.389301,9.627628],[49.392038,9.630203],[49.394832,9.632177],[49.393882,9.636211],[49.395167,9.639559],[49.397625,9.641705],[49.399636,9.643078],[49.404271,9.646683],[49.407567,9.64797],[49.407958,9.646597],[49.409521,9.642563],[49.409745,9.638615],[49.408404,9.635696],[49.405724,9.634066],[49.403322,9.630203],[49.405779,9.62883],[49.407287,9.628229],[49.409745,9.626169],[49.410247,9.621191],[49.408907,9.615784]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.12,dashArray:'6,4'}).bindPopup('<strong>Rebhuhngebiet (Hohenlohe Süd)</strong>'),
+  L.polygon([[49.414491,9.611578],[49.413095,9.618444],[49.413263,9.63192],[49.417562,9.649515],[49.421917,9.653807],[49.427165,9.654837],[49.433976,9.657669],[49.442013,9.656639],[49.443798,9.643421],[49.443352,9.632435],[49.44737,9.613724],[49.446812,9.603682],[49.444915,9.597244],[49.44112,9.590721],[49.434422,9.587889],[49.427221,9.590549],[49.421359,9.594927],[49.416781,9.604282]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.12,dashArray:'6,4'}).bindPopup('<strong>Rebhuhngebiet (Hohenlohe Nord)</strong>'),
+  L.polygon([[49.342684,9.801607],[49.350177,9.783154],[49.361191,9.768476],[49.370861,9.756632],[49.376952,9.752855],[49.393659,9.769249],[49.401255,9.780407],[49.404216,9.804697],[49.402149,9.819975],[49.395502,9.833965],[49.385111,9.844265],[49.369687,9.85671],[49.357669,9.861517],[49.347661,9.858599],[49.344138,9.840746]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.12,dashArray:'6,4'}).bindPopup('<strong>Rebhuhngebiet (Hohenlohe Ost)</strong>'),
+]);
+
+featureLayers.team_potenz_rebhuhn = L.polygon([[49.229593,9.483948],[49.218158,9.449959],[49.206159,9.40567],[49.176317,9.432106],[49.166216,9.502487],[49.17093,9.56583],[49.185518,9.603252],[49.211654,9.630547],[49.23531,9.620247],[49.256714,9.590549],[49.270717,9.549694],[49.244724,9.501801]],
+  {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.10,dashArray:'4,8'})
+.bindPopup('<strong>Potentielles Rebhuhnhabitat</strong><br><em>Hohenlohe — noch zu bestätigen</em>');
+
+featureLayers.team_rastplatz = L.polygon([[49.126199,9.392281],[49.126859,9.388783],[49.127182,9.384406],[49.126803,9.380372],[49.124739,9.375436],[49.120484,9.372239],[49.117268,9.371703],[49.114375,9.373891],[49.112071,9.375758],[49.110779,9.379985],[49.111256,9.3855],[49.111537,9.38962],[49.114206,9.392946],[49.121074,9.392796],[49.123868,9.393096]],
+  {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.20})
+.bindPopup('<strong>Rastplatz Migrierende Vogelart</strong><br><em>Insbesondere Wasservögel</em>');
+
+featureLayers.team_feuchtgebiet = L.polygon([[49.163045,8.939481],[49.162821,8.937335],[49.161951,8.936133],[49.160772,8.935318],[49.159313,8.93476],[49.158387,8.934889],[49.157096,8.935318],[49.156506,8.935833],[49.155804,8.93652],[49.155103,8.937593],[49.154598,8.939781],[49.155271,8.940854],[49.15746,8.941541],[49.160548,8.940597],[49.162484,8.940425]],
+  {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.25})
+.bindPopup('<strong>Feuchtgebiet</strong>');
+
+// ── Bedrohungen (rot) ──
+featureLayers.team_windkraft = L.layerGroup([
+  L.polygon([[49.121748,9.003296],[49.108939,8.994026],[49.099161,8.997803],[49.094553,9.014969],[49.095677,9.041061],[49.096689,9.060974],[49.10096,9.107151],[49.112759,9.126377],[49.130173,9.121056],[49.135789,9.105091],[49.135452,9.062347],[49.132869,9.032135]],{color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.15}).bindPopup('<strong>Windkraftentwicklung — Windpark Heuchelberg</strong>'),
+  L.polygon([[49.057614,9.320269],[49.05812,9.304304],[49.054351,9.29512],[49.049289,9.29306],[49.045857,9.303017],[49.041019,9.317093],[49.041469,9.323702],[49.044901,9.3328],[49.048895,9.340181],[49.054014,9.337435],[49.056995,9.329453]],{color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.15}).bindPopup('<strong>Windkraftentwicklung (Süd)</strong>'),
+]);
+
+// ── NABU Aktivitäten (lila) ──
+featureLayers.team_nabu_gruppen = L.layerGroup([
+  L.circleMarker([49.137586,9.212422],{radius:7,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.9}).bindPopup('<strong>NABU Büro Heilbronn</strong>'),
+  L.circleMarker([49.07679,9.068012],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.066443,8.998318],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.14118,9.056339],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.0404,9.313917],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.024249,9.318552],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.239093,9.1011],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.41008,9.611492],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.481007,9.639902],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.150219,9.284563],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.137249,9.355116],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.200102,9.502144],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.32322,9.358807],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.227968,9.207401],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.230322,9.161739],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+]);
+
+featureLayers.team_rebhuhnarbeit = L.layerGroup([
+  L.polygon([[49.083761,9.072733],[49.076284,9.07402],[49.072123,9.077969],[49.069311,9.081402],[49.068018,9.089384],[49.068805,9.094191],[49.070211,9.098997],[49.076621,9.104748],[49.07932,9.103975],[49.082918,9.09771],[49.085841,9.092646],[49.087415,9.083805],[49.086628,9.077625]],{color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.18}).bindPopup('<strong>Rebhuhnarbeit mit Landwirten — Blühstreifen (Heilbronn)</strong>'),
+  L.polygon([[49.407734,9.613895],[49.405277,9.608746],[49.401591,9.607887],[49.398016,9.609089],[49.393994,9.610977],[49.39053,9.613552],[49.387401,9.616127],[49.386619,9.621105],[49.386843,9.625568],[49.390977,9.629345],[49.394441,9.632263],[49.394329,9.636383],[49.396228,9.640846],[49.400362,9.643936],[49.406505,9.647369],[49.408628,9.645138],[49.409298,9.637756],[49.405388,9.63295],[49.404383,9.630718],[49.408293,9.628487],[49.410191,9.62574],[49.409745,9.619045]],{color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.18}).bindPopup('<strong>Rebhuhnarbeit mit Landwirten (Hohenlohe)</strong>'),
+  L.circleMarker([49.200327,9.506264],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.9}).bindPopup('<strong>Idee Rebhuhnarbeit mit Landwirten</strong><br><em>Hohenlohe — noch zu entwickeln</em>'),
+]);
+
+featureLayers.team_green_capital = L.polygon([[49.188211,9.218388],[49.192138,9.172554],[49.206944,9.166031],[49.210981,9.112816],[49.200214,9.114361],[49.200887,9.044666],[49.188211,9.079857],[49.174297,9.091702],[49.173624,9.1329],[49.161951,9.140453],[49.150836,9.168091],[49.128263,9.135132],[49.095227,9.164314],[49.095003,9.182167],[49.106017,9.182167],[49.113321,9.209976],[49.102421,9.25581],[49.110063,9.261818],[49.114332,9.306278],[49.121298,9.278812],[49.12523,9.284477],[49.147131,9.277782],[49.147468,9.260445],[49.158471,9.266109],[49.16992,9.225769]],
+  {color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.12,dashArray:'6,4'})
+.bindPopup('<strong>Green Capital City Projekt Heilbronn</strong><br><em>NABU Unterstützung</em>');
+
+// ── Notizen (vom Nutzer platziert) ──
+featureLayers.team_notizen = L.layerGroup([
+  L.marker([49.381926,9.746246], { icon: L.divIcon({ className:'', html:'<div class="map-note">Landkreis Hohenlohe</div>', iconSize:null }), draggable:true, zIndexOffset:10000 })
+    .bindPopup('<strong>Landkreis Hohenlohe</strong><br><em style="color:#e65100;">Notiz</em>'),
+  L.marker([49.274973,9.036255], { icon: L.divIcon({ className:'', html:'<div class="map-note">Landkreis Heilbronn</div>', iconSize:null }), draggable:true, zIndexOffset:10000 })
+    .bindPopup('<strong>Landkreis Heilbronn</strong><br><em style="color:#e65100;">Notiz</em>'),
+  L.marker([49.133206,9.213753], { icon: L.divIcon({ className:'', html:'<div class="map-note">Stadt Heilbronn</div>', iconSize:null }), draggable:true, zIndexOffset:10000 })
+    .bindPopup('<strong>Stadt Heilbronn</strong><br><em style="color:#e65100;">Notiz</em>'),
+]);
+
+featureLayers.team_notiz_lvwo = L.marker([49.15151,9.270916], { icon: L.divIcon({ className:'', html:'<div class="map-note">LVWO</div>', iconSize:null }), draggable:true, zIndexOffset:10000 })
+  .bindPopup('<strong>Lehr- und Versuchsanstalt für Wein- und Obstbau (LVWO)</strong><br><em style="color:#555;">Anderer Akteur</em>');
+
+// Kleinere Shapes nach vorne (höherer z-index) damit sie anklickbar bleiben
+Object.keys(featureLayers).forEach(function(key) {
+  var layer = featureLayers[key];
+  function setZByArea(l) {
+    if (l.eachLayer) { l.eachLayer(setZByArea); return; }
+    if (l.getLatLngs) {
+      // Fläche approximieren via Bounding Box
+      var bounds = l.getBounds();
+      var area = (bounds.getNorth()-bounds.getSouth()) * (bounds.getEast()-bounds.getWest());
+      // Kleiner = höherer z-index (max 10000 minus skalierte Fläche)
+      var z = Math.round(10000 - Math.min(area * 100000, 9999));
+      if (l._path) l._path.style.zIndex = z;
+      // Leaflet renderer: bringToFront für kleine Shapes
+      if (area < 0.01) { setTimeout(function(){ if(l.bringToFront) l.bringToFront(); }, 100); }
+    }
+  }
+  setZByArea(layer);
+});
+
+// Feature state tracking
+const featureState = {};
+Object.keys(featureLayers).forEach(k => featureState[k] = false);
+featureState.kreise = true;
+
+// ============ TOGGLE FUNCTIONS ============
+function toggleFeature(key) {
+  if (!featureLayers[key]) return;
+  featureState[key] = !featureState[key];
+  if (featureState[key]) {
+    map.addLayer(featureLayers[key]);
+    document.getElementById('check-' + key)?.classList.add('checked');
+    // Kleinere Shapes nach vorne sortieren
+    sortLayersBySize();
+  } else {
+    map.removeLayer(featureLayers[key]);
+    document.getElementById('check-' + key)?.classList.remove('checked');
+  }
+}
+
+// Sortiert alle sichtbaren Polygon-Shapes: große nach hinten, kleine nach vorne
+function sortLayersBySize() {
+  var allPolygons = [];
+  Object.keys(featureLayers).forEach(function(key) {
+    if (!featureState[key]) return;
+    var layer = featureLayers[key];
+    function collect(l) {
+      if (l.eachLayer) { l.eachLayer(collect); return; }
+      if (l.getBounds && l.getLatLngs) {
+        var b = l.getBounds();
+        var area = (b.getNorth()-b.getSouth()) * (b.getEast()-b.getWest());
+        allPolygons.push({ layer: l, area: area });
+      }
+    }
+    collect(layer);
+  });
+  // Sortiere: größte zuerst (nach hinten), kleinste zuletzt (nach vorne)
+  allPolygons.sort(function(a,b) { return b.area - a.area; });
+  allPolygons.forEach(function(p) {
+    if (p.layer.bringToFront) p.layer.bringToFront();
+  });
+}
+
+function showTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabName).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleCatLayers(catName, keys) {
+  var tgl = document.getElementById('cattgl-' + catName);
+  var turnOn = !tgl.classList.contains('checked');
+  tgl.classList.toggle('checked', turnOn);
+  keys.forEach(function(key) {
+    if (!featureLayers[key]) return;
+    if (turnOn && !featureState[key]) { toggleFeature(key); }
+    else if (!turnOn && featureState[key]) { toggleFeature(key); }
+  });
+}
+
+function toggleCat(id) {
+  var body = document.getElementById(id);
+  var arrow = document.getElementById('arrow-' + id);
+  body.classList.toggle('collapsed');
+  arrow.classList.toggle('collapsed');
+}
+
+function togglePanel() {
+  document.getElementById('panel').classList.toggle('collapsed');
+  document.getElementById('toggle-panel').classList.toggle('collapsed');
+  document.getElementById('export-bar').classList.toggle('panel-collapsed');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ZEICHENWERKZEUG mit Kategorie-Farbauswahl
+// ══════════════════════════════════════════════════════════════════
+let currentCategory = 'scope';
+let currentColor = '#1565c0';
+
+function setCategory(cat, color, btn) {
+  currentCategory = cat;
+  currentColor = color;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Zeichenwerkzeug-Farben live aktualisieren
+  if (drawControl._toolbars.draw) {
+    const opts = drawControl._toolbars.draw._modes;
+    if (opts.polygon) opts.polygon.handler.options.shapeOptions.color = color;
+    if (opts.polyline) opts.polyline.handler.options.shapeOptions.color = color;
+    if (opts.rectangle) opts.rectangle.handler.options.shapeOptions.color = color;
+  }
+}
+
+const drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+const drawControl = new L.Control.Draw({
+  position: 'topleft',
+  draw: {
+    polygon: { shapeOptions: { color: '#1565c0', weight: 3, fillOpacity: 0.20 } },
+    polyline: { shapeOptions: { color: '#1565c0', weight: 4 } },
+    rectangle: { shapeOptions: { color: '#1565c0', weight: 2, fillOpacity: 0.20 } },
+    circle: false, circlemarker: false, marker: true
+  },
+  edit: { featureGroup: drawnItems, remove: true }
+});
+map.addControl(drawControl);
+
+function updateDrawExport() {
+  const count = drawnItems.getLayers().length;
+  document.getElementById('draw-count').textContent = count;
+  if (count === 0) { document.getElementById('draw-export').style.display='none'; return; }
+  document.getElementById('draw-export').style.display = 'block';
+  const features = [];
+  drawnItems.eachLayer(function(layer) {
+    const feature = {
+      name: layer._drawLabel || 'Unbenannt',
+      category: layer._drawCategory || 'scope',
+      color: layer._drawColor || '#1565c0',
+      type: ''
+    };
+    if (layer instanceof L.Marker) {
+      const ll = layer.getLatLng();
+      feature.type = 'marker';
+      feature.coords = [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))];
+    } else if (layer instanceof L.Polygon) {
+      feature.type = 'polygon';
+      feature.coords = layer.getLatLngs()[0].map(function(ll) {
+        return [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))];
+      });
+    } else if (layer instanceof L.Polyline) {
+      feature.type = 'polyline';
+      feature.coords = layer.getLatLngs().map(function(ll) {
+        return [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))];
+      });
+    }
+    features.push(feature);
+  });
+  document.getElementById('draw-json').textContent = JSON.stringify(features, null, 2);
+}
+
+const catLabels = {
+  scope:'Scope/Rahmen', schutzobjekt:'Schutzobjekt/-gebiet', bedrohung:'Bedrohung',
+  nabu:'NABU Aktivitäten'
+};
+
+map.on(L.Draw.Event.CREATED, function(e) {
+  var name = prompt('Name / Beschreibung für dieses Feature:\n(Kategorie: ' + (catLabels[currentCategory]||currentCategory) + ')');
+  if (name === null) name = 'Unbenannt';
+  e.layer._drawLabel = name;
+  e.layer._drawCategory = currentCategory;
+  e.layer._drawColor = currentColor;
+  // Farbe auf das Feature anwenden
+  if (e.layer.setStyle) {
+    e.layer.setStyle({ color: currentColor, fillColor: currentColor, fillOpacity: 0.20, weight: 3 });
+  }
+  var catText = catLabels[currentCategory] || currentCategory;
+  e.layer.bindPopup('<strong>' + name + '</strong><br><em style="color:' + currentColor + ';">' + catText + '</em>');
+  e.layer.bindTooltip(name, { permanent: false, direction: 'top' });
+  drawnItems.addLayer(e.layer);
+  updateDrawExport();
+});
+map.on(L.Draw.Event.EDITED, updateDrawExport);
+map.on(L.Draw.Event.DELETED, updateDrawExport);
+
+function copyDrawJSON() {
+  const text = document.getElementById('draw-json').textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    alert('Koordinaten in Zwischenablage kopiert! Einfach an Claude schicken.');
+  });
+}
+function clearDrawn() { drawnItems.clearLayers(); updateDrawExport(); }
+
+// ── Shape-Labels Toggle ──
+let labelsVisible = false;
+function toggleLabels() {
+  labelsVisible = !labelsVisible;
+  var btn = document.getElementById('btn-labels');
+  btn.textContent = labelsVisible ? '🏷️ Shape-Labels ausblenden' : '🏷️ Shape-Labels einblenden';
+  btn.style.background = labelsVisible ? '#2e7d32' : '#555';
+  Object.keys(featureLayers).forEach(function(key) {
+    if (!key.startsWith('team_')) return;
+    var layer = featureLayers[key];
+    function processLayer(l) {
+      if (l.eachLayer) { l.eachLayer(processLayer); return; }
+      if (!l.getPopup || !l.getPopup()) return;
+      var popContent = l.getPopup().getContent();
+      var match = popContent.match(/<strong>(.*?)<\/strong>/);
+      if (!match) return;
+      var name = match[1];
+      if (labelsVisible) {
+        l.bindTooltip(name, { permanent:true, direction:'center', className:'shape-label' });
+      } else {
+        l.unbindTooltip();
+      }
+    }
+    processLayer(layer);
+  });
+}
+
+function exportNotePositions() {
+  var notes = [];
+  // Permanente Notizen aus featureLayers.team_notizen
+  if (featureLayers.team_notizen) {
+    featureLayers.team_notizen.eachLayer(function(layer) {
+      if (layer.getLatLng) {
+        var ll = layer.getLatLng();
+        var el = layer.getElement();
+        var text = el ? el.querySelector('.map-note')?.textContent || 'Unbenannt' : 'Unbenannt';
+        notes.push({ name: text, coords: [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))] });
+      }
+    });
+  }
+  // Auch gezeichnete Notizen aus drawnItems
+  drawnItems.eachLayer(function(layer) {
+    if (layer._drawCategory === 'notiz' && layer.getLatLng) {
+      var ll = layer.getLatLng();
+      notes.push({ name: layer._drawLabel || 'Unbenannt', coords: [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))] });
+    }
+  });
+  var json = JSON.stringify(notes, null, 2);
+  navigator.clipboard.writeText(json).then(function() {
+    alert('Notiz-Positionen kopiert (' + notes.length + ' Notizen). Einfach an Claude schicken.');
+  });
+}
+
+// ── Text-Notiz: Klick auf Karte platziert ein Textlabel ──
+let noteMode = false;
+function addTextNote() {
+  if (noteMode) { noteMode = false; map.getContainer().style.cursor = ''; return; }
+  noteMode = true;
+  map.getContainer().style.cursor = 'crosshair';
+  // Click direkt auf dem map-Container abfangen — umgeht Shapes die den Click fressen
+  function onNoteClick(e) {
+    noteMode = false;
+    map.getContainer().style.cursor = '';
+    map.getContainer().removeEventListener('click', onNoteClick);
+    var ll = map.containerPointToLatLng(L.point(e.offsetX, e.offsetY));
+    var text = prompt('Notiz-Text:');
+    if (!text) return;
+    var icon = L.divIcon({ className: '', html: '<div class="map-note">' + text + '</div>', iconSize: null });
+    var marker = L.marker(ll, { icon: icon, draggable: true, zIndexOffset: 10000 });
+    marker._drawLabel = text;
+    marker._drawCategory = 'notiz';
+    marker._drawColor = '#e65100';
+    marker.bindPopup('<strong>' + text + '</strong><br><em style="color:#e65100;">Notiz</em>');
+    drawnItems.addLayer(marker);
+    updateDrawExport();
+  }
+  map.getContainer().addEventListener('click', onNoteClick);
+}
+
+// ── Shape-Auswahl + Shapefile-Export ──
+var selectMode = false;
+var selectedLayers = new Set();
+var originalStyles = new Map();
+
+function toggleSelectMode() {
+  selectMode = !selectMode;
+  var btn = document.getElementById('select-mode-btn');
+  var mapEl = document.getElementById('map');
+  btn.classList.toggle('active-mode', selectMode);
+  btn.textContent = selectMode ? '✋ Auswahl aktiv' : '✋ Auswählen';
+  mapEl.classList.toggle('select-mode', selectMode);
+  if (!selectMode && selectedLayers.size > 0) {
+    document.getElementById('export-selected-btn').style.display = '';
+    document.getElementById('clear-selection-btn').style.display = '';
+  }
+}
+
+function updateSelectionUI() {
+  var count = selectedLayers.size;
+  document.getElementById('select-count').textContent = count;
+  document.getElementById('export-selected-btn').style.display = count > 0 ? '' : 'none';
+  document.getElementById('clear-selection-btn').style.display = count > 0 ? '' : 'none';
+}
+
+function clearSelection() {
+  selectedLayers.forEach(function(l) {
+    if (originalStyles.has(l) && l.setStyle) {
+      l.setStyle(originalStyles.get(l));
+    }
+  });
+  selectedLayers.clear();
+  originalStyles.clear();
+  updateSelectionUI();
+}
+
+// Click-Handler für Auswahl auf alle Team-Features registrieren
+function registerSelectHandlers() {
+  Object.keys(featureLayers).forEach(function(key) {
+    if (!key.startsWith('team_')) return;
+    function addHandler(l) {
+      if (l.eachLayer) { l.eachLayer(addHandler); return; }
+      l.on('click', function(e) {
+        if (!selectMode) return;
+        L.DomEvent.stopPropagation(e);
+        if (selectedLayers.has(l)) {
+          // Deselektieren
+          selectedLayers.delete(l);
+          if (originalStyles.has(l) && l.setStyle) {
+            l.setStyle(originalStyles.get(l));
+            originalStyles.delete(l);
+          }
+        } else {
+          // Selektieren — Highlight mit weißem dickem Rand
+          selectedLayers.add(l);
+          if (l.setStyle) {
+            var cur = {};
+            if (l.options) { cur = { color: l.options.color, weight: l.options.weight, dashArray: l.options.dashArray, fillOpacity: l.options.fillOpacity }; }
+            originalStyles.set(l, cur);
+            l.setStyle({ color: '#ffffff', weight: 5, dashArray: null, fillOpacity: 0.35 });
+          }
+        }
+        updateSelectionUI();
+      });
+    }
+    addHandler(featureLayers[key]);
+  });
+}
+
+function layerToGeoFeature(l, fallbackName) {
+  var props = { name: fallbackName || '', category: '' };
+  if (l.getPopup && l.getPopup()) {
+    var match = l.getPopup().getContent().match(/<strong>(.*?)<\/strong>/);
+    if (match) props.name = match[1];
+  }
+  if (l._drawLabel) props.name = l._drawLabel;
+  if (l._drawCategory) props.category = l._drawCategory;
+
+  if (l.getLatLngs) {
+    if (l instanceof L.Polygon) {
+      var coords = l.getLatLngs()[0].map(function(ll) { return [ll.lng, ll.lat]; });
+      coords.push(coords[0]);
+      return { type:'Feature', properties:props, geometry:{ type:'Polygon', coordinates:[coords] } };
+    } else {
+      var coords2 = l.getLatLngs().map(function(ll) { return [ll.lng, ll.lat]; });
+      return { type:'Feature', properties:props, geometry:{ type:'LineString', coordinates:coords2 } };
+    }
+  } else if (l.getLatLng) {
+    var ll = l.getLatLng();
+    return { type:'Feature', properties:props, geometry:{ type:'Point', coordinates:[ll.lng, ll.lat] } };
+  }
+  return null;
+}
+
+function exportShapefile(mode) {
+  var geoFeatures = [];
+
+  if (mode === 'selected') {
+    selectedLayers.forEach(function(l) {
+      var f = layerToGeoFeature(l);
+      if (f) geoFeatures.push(f);
+    });
+  }
+
+  if (geoFeatures.length === 0) {
+    alert('Keine Shapes ausgewählt.\n\n1. Klick "✋ Auswählen"\n2. Klick auf Shapes um sie zu markieren (weiß)\n3. Klick "📦 Export"');
+    return;
+  }
+
+  var geojson = { type:'FeatureCollection', features: geoFeatures };
+
+  // Nur einen Geometrietyp pro Shapefile — aufteilen
+  var polygons = { type:'FeatureCollection', features: geoFeatures.filter(function(f){ return f.geometry.type === 'Polygon'; }) };
+  var lines = { type:'FeatureCollection', features: geoFeatures.filter(function(f){ return f.geometry.type === 'LineString'; }) };
+  var points = { type:'FeatureCollection', features: geoFeatures.filter(function(f){ return f.geometry.type === 'Point'; }) };
+
+  // Das größte Set exportieren (oder Polygone wenn vorhanden)
+  var exportSet = polygons.features.length > 0 ? polygons : (lines.features.length > 0 ? lines : points);
+  var typeName = polygons.features.length > 0 ? 'Polygone' : (lines.features.length > 0 ? 'Linien' : 'Punkte');
+
+  if (typeof shpwrite !== 'undefined' && shpwrite.zip) {
+    try {
+      var zipContent = shpwrite.zip(exportSet);
+      // zipContent ist ein base64-String — in Blob umwandeln
+      var binary = atob(zipContent);
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      var blob = new Blob([bytes], { type: 'application/zip' });
+      var blobUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'Scope-Karte-Heilbronn-' + new Date().toISOString().slice(0,10) + '.zip';
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+      if (geoFeatures.length !== exportSet.features.length) {
+        alert('Shapefile enthält ' + exportSet.features.length + ' ' + typeName + '.\n' +
+          (geoFeatures.length - exportSet.features.length) + ' Features mit anderem Geometrietyp wurden ausgelassen.\n' +
+          '(Ein Shapefile kann nur einen Geometrietyp enthalten.)');
+      }
+      return;
+    } catch(err) {
+      console.error('Shapefile fehlgeschlagen:', err);
+      alert('Shapefile-Export fehlgeschlagen: ' + err.message + '\n\nFallback: GeoJSON');
+    }
+  } else {
+    console.error('shpwrite nicht verfügbar:', typeof shpwrite);
+  }
+
+  // Fallback: GeoJSON
+  var fjson = new Blob([JSON.stringify(geojson, null, 2)], {type:'application/json'});
+  var furl = URL.createObjectURL(fjson);
+  var fa = document.createElement('a');
+  fa.href = furl;
+  fa.download = 'Scope-Karte-Heilbronn-' + new Date().toISOString().slice(0,10) + '.geojson';
+  fa.click();
+  URL.revokeObjectURL(furl);
+}
+
+// Handler registrieren nachdem alle Features geladen
+setTimeout(registerSelectHandlers, 2000);
+
+// ── Karte als PNG exportieren ──
+function exportMapImage() {
+  // Panel ausblenden für sauberen Export
+  var panel = document.getElementById('panel');
+  var toggle = document.getElementById('toggle-panel');
+  var catBar = document.getElementById('category-bar');
+  var coords = document.getElementById('coords-display');
+  var drawExport = document.getElementById('draw-export');
+  panel.style.display = 'none';
+  toggle.style.display = 'none';
+  catBar.style.display = 'none';
+  coords.style.display = 'none';
+  drawExport.style.display = 'none';
+  // Leaflet zoom/layer controls ausblenden
+  document.querySelectorAll('.leaflet-control-container').forEach(function(el) { el.style.display = 'none'; });
+
+  setTimeout(function() {
+    html2canvas(document.getElementById('map'), {
+      useCORS: true,
+      allowTaint: true,
+      scale: 3, // 2x Retina
+      logging: false
+    }).then(function(canvas) {
+      // Alles wieder einblenden
+      panel.style.display = '';
+      toggle.style.display = '';
+      catBar.style.display = '';
+      coords.style.display = '';
+      document.querySelectorAll('.leaflet-control-container').forEach(function(el) { el.style.display = ''; });
+
+      // Download
+      var link = document.createElement('a');
+      link.download = 'Scope-Karte-Heilbronn-' + new Date().toISOString().slice(0,10) + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }).catch(function(err) {
+      // Bei Fehler alles wieder einblenden
+      panel.style.display = '';
+      toggle.style.display = '';
+      catBar.style.display = '';
+      coords.style.display = '';
+      document.querySelectorAll('.leaflet-control-container').forEach(function(el) { el.style.display = ''; });
+      alert('Export fehlgeschlagen: ' + err.message + '\n\nAlternative: Rechtsklick → Screenshot machen');
+    });
+  }, 500); // Kurz warten damit UI sich aktualisiert
+}
+
+// ── Screenshot-Export ──
+function takeScreenshot() {
+  var btn = document.getElementById('screenshot-btn');
+  btn.classList.add('busy');
+  btn.textContent = '⏳ Erstellt...';
+  var cursor = document.getElementById('custom-cursor');
+  var exportBox = document.getElementById('draw-export');
+  var catBar = document.getElementById('category-bar');
+  var coordsDisp = document.getElementById('coords-display');
+  var exportBar = document.getElementById('export-bar');
+  cursor.style.display = 'none';
+  if (exportBox) exportBox.style.visibility = 'hidden';
+  if (catBar) catBar.style.visibility = 'hidden';
+  if (coordsDisp) coordsDisp.style.visibility = 'hidden';
+  if (exportBar) exportBar.style.visibility = 'hidden';
+  setTimeout(function() {
+    html2canvas(document.getElementById('map'), {
+      useCORS: true, allowTaint: true, scale: 2, logging: false, backgroundColor: '#ffffff'
+    }).then(function(canvas) {
+      canvas.toBlob(function(blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "Scope-Karte-Heilbronn-" + new Date().toISOString().slice(0,10) + ".png";
+        a.click();
+        if (exportBox) exportBox.style.visibility = 'visible';
+        if (catBar) catBar.style.visibility = 'visible';
+        if (coordsDisp) coordsDisp.style.visibility = 'visible';
+        if (exportBar) exportBar.style.visibility = 'visible';
+        btn.classList.remove('busy');
+        btn.textContent = '📷 PNG';
+      });
+    }).catch(function(err) {
+      console.error('Screenshot fehlgeschlagen:', err);
+      if (exportBox) exportBox.style.visibility = 'visible';
+      if (catBar) catBar.style.visibility = 'visible';
+      if (coordsDisp) coordsDisp.style.visibility = 'visible';
+      if (exportBar) exportBar.style.visibility = 'visible';
+      btn.classList.remove('busy');
+      btn.textContent = '📷 PNG';
+    });
+  }, 300); // Längeres Warten damit höher-aufgelöste Tiles laden
+}
+
+// Koordinatenanzeige + sichtbarer Cursor für Online-Meetings
+var cursor = document.getElementById('custom-cursor');
+document.addEventListener('mousemove', function(e) {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+  cursor.style.display = 'block';
+});
+document.addEventListener('mouseleave', function() { cursor.style.display = 'none'; });
+map.on('mousemove', function(e) {
+  document.getElementById('coords-display').textContent =
+    e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5);
+});
+</script>
+</body>
+</html>
