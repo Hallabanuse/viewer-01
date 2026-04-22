@@ -419,7 +419,7 @@ async function checkPw(){
     <div class="cat-header">
       <span class="arrow" id="arrow-cat-schutzobjekt" onclick="toggleCat('cat-schutzobjekt')">▼</span>
       <h2 style="color:#4caf50; margin:0; flex:1;" onclick="toggleCat('cat-schutzobjekt')">Schutzobjekte/-gebiete</h2>
-      <div class="cat-toggle" id="cattgl-schutzobjekt" onclick="toggleCatLayers('schutzobjekt',['team_gruenesband','team_fluthamel'])"></div>
+      <div class="cat-toggle" id="cattgl-schutzobjekt" onclick="toggleCatLayers('schutzobjekt',['team_gruenesband','team_fluthamel','team_aerzen_nord','team_aerzen_sued'])"></div>
     </div>
     <div class="cat-body" id="cat-schutzobjekt" style="max-height:500px;">
       <div class="feature-item" onclick="toggleFeature('team_gruenesband')">
@@ -431,6 +431,16 @@ async function checkPw(){
         <div class="checkbox" id="check-team_fluthamel"></div>
         <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
         <div class="feature-label">Fluthamel — Bieber</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_aerzen_nord')">
+        <div class="checkbox" id="check-team_aerzen_nord"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Potenzialflächen Aerzen Nord (76)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_aerzen_sued')">
+        <div class="checkbox" id="check-team_aerzen_sued"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Potenzialflächen Aerzen Süd (63)</div>
       </div>
     </div>
 
@@ -450,7 +460,7 @@ async function checkPw(){
     <div class="cat-header">
       <span class="arrow" id="arrow-cat-nabu" onclick="toggleCat('cat-nabu')">▼</span>
       <h2 style="color:#c6a700; margin:0; flex:1;" onclick="toggleCat('cat-nabu')">NABU Aktivitäten</h2>
-      <div class="cat-toggle" id="cattgl-nabu" onclick="toggleCatLayers('nabu',['team_blauesband','team_nabu_weitere'])"></div>
+      <div class="cat-toggle" id="cattgl-nabu" onclick="toggleCatLayers('nabu',['team_blauesband','team_nabu_weitere','team_badmuender_nabu'])"></div>
     </div>
     <div class="cat-body" id="cat-nabu" style="max-height:500px;">
       <div class="feature-item" onclick="toggleFeature('team_blauesband')">
@@ -462,6 +472,11 @@ async function checkPw(){
         <div class="checkbox" id="check-team_nabu_weitere"></div>
         <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
         <div class="feature-label">ÖSSM + Zuckerstab</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_badmuender_nabu')">
+        <div class="checkbox" id="check-team_badmuender_nabu"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">NABU-Flächen Bad Münder (38)</div>
       </div>
     </div>
 
@@ -644,6 +659,219 @@ featureLayers.team_fluthamel = L.layerGroup();
 L.polyline([[52.090055,9.361854],[52.090397,9.364042],[52.091056,9.366231],[52.092006,9.369278],[52.092428,9.371123],[52.093403,9.373527],[52.09393,9.374771],[52.094273,9.376016],[52.095644,9.379535],[52.09691,9.382625],[52.097912,9.384212],[52.098887,9.386444],[52.100416,9.390178],[52.101576,9.39198],[52.102525,9.393182],[52.103658,9.394555],[52.104555,9.395156],[52.104792,9.397044],[52.10466,9.39786]], {color:'#4caf50',weight:3})
   .bindPopup('<strong>Fluthamel — Bieber</strong><br><em style="color:#4caf50;">Schutzobjekt (Gewässerlauf)</em>')
   .addTo(featureLayers.team_fluthamel);
+
+
+// ============ TEAM-EINTRAEGE: PERMANENTE LAYER AUS JSON-EXPORT ============
+
+// NABU-Flächen Bad Münder (40 Polygone) -> NABU Aktivitäten (gelb)
+const bmData = [
+  {name:"Halbtrockenrasen, Grundstück Nr.1",type:"polygon",coords:[[52.205503,9.437063],[52.206686,9.437256],[52.206134,9.440839],[52.205016,9.440668]]},
+  {name:"Trockenrasen, Nordhang, Grundstück Nr.2",type:"polygon",coords:[[52.206713,9.437213],[52.207028,9.437256],[52.207186,9.436462],[52.207528,9.436505],[52.206686,9.440968],[52.206108,9.440775]]},
+  {name:"Feuchtwiese, Grundstück Nr.3",type:"polygon",coords:[[52.202238,9.425519],[52.202301,9.425980],[52.203083,9.425653],[52.202938,9.424730]]},
+  {name:"Feucht- und Streuwiese, Grundstück Nr.4",type:"polygon",coords:[[52.200676,9.427525],[52.200722,9.427954],[52.199637,9.430647],[52.199407,9.430293]]},
+  {name:"Feucht- und Streuwiese, Grundstück Nr.4",type:"polygon",coords:[[52.200473,9.427053],[52.200637,9.427353],[52.199414,9.430196],[52.198993,9.428598],[52.199874,9.427493]]},
+  {name:"Bachlauf, Röhricht, Seggenried, Weidenbruch,  Landschaftsteiche , Grundstück Nr. 5",type:"polygon",coords:[[52.217770,9.426334],[52.218191,9.423866],[52.221280,9.425197],[52.220780,9.427793]]},
+  {name:"Magerrasen, Feuchtwiese , Grundstück Nr. 6",type:"polygon",coords:[[52.205753,9.421211],[52.205920,9.421157],[52.206022,9.421463],[52.205953,9.421763],[52.205812,9.421790]]},
+  {name:"Feuchtwiese, Sumpfdotterblumen, Grundstück Nr.7",type:"polygon",coords:[[52.202629,9.426500],[52.202564,9.425948],[52.203678,9.425422],[52.203727,9.426152]]},
+  {name:"Von Hecke eingerahmte Staudenwiese , Grundstück Nr. 9",type:"polygon",coords:[[52.204950,9.484001],[52.205089,9.483690],[52.206962,9.485933],[52.206818,9.486244]]},
+  {name:"Streu- und Feuchtwiese , Grundstück Nr. 10",type:"polygon",coords:[[52.180202,9.472007],[52.180866,9.473766],[52.180399,9.474013],[52.179886,9.472672]]},
+  {name:"Bach, Streu- und Feuchtwiese , Grundstück Nr. 11 ",type:"polygon",coords:[[52.179892,9.472768],[52.179774,9.473734],[52.180136,9.474496],[52.180537,9.474066],[52.180412,9.474013]]},
+  {name:"Bach, Feuchtwiese , Grundstück Nr. 12 ",type:"polygon",coords:[[52.211637,9.419628],[52.211446,9.420658],[52.211229,9.420573],[52.211039,9.420615],[52.211006,9.420304],[52.210631,9.420283],[52.210624,9.419457],[52.211150,9.419467]]},
+  {name:"Bach, Feuchtwiese , Grundstück Nr. 13 ",type:"polygon",coords:[[52.205128,9.423898],[52.205522,9.425529],[52.205181,9.425669],[52.204924,9.424510]]},
+  {name:"Bach, Streu- und Feuchtwiese Weiden und Erlen am Bachlauf , Grundstück Nr. 15 ",type:"polygon",coords:[[52.188063,9.435652],[52.188454,9.436494],[52.188829,9.437052],[52.188372,9.437723],[52.187918,9.436532],[52.187832,9.435872]]},
+  {name:"Feuchtwiese , Grundstück Nr. 16 ",type:"polygon",coords:[[52.173958,9.458692],[52.173287,9.460645],[52.173484,9.461203],[52.173708,9.461331],[52.174879,9.459636],[52.174537,9.459293],[52.173800,9.460516]]},
+  {name:"Erlen-, Pappelwald , Grundstück Nr. 17",type:"polygon",coords:[[52.211656,9.419671],[52.211472,9.420615],[52.212261,9.421012],[52.212478,9.421442],[52.212715,9.420283]]},
+  {name:"    Erlenbruchwald , Grundstück Nr. 18 ",type:"polygon",coords:[[52.190657,9.441569],[52.190404,9.441569],[52.190427,9.442148],[52.190483,9.442207],[52.190661,9.442191]]},
+  {name:"    Streuobstwiese ,  Grundstück Nr. 19 ",type:"polygon",coords:[[52.203040,9.432524],[52.203501,9.432777],[52.203162,9.434257],[52.203057,9.434225],[52.203109,9.433066],[52.203021,9.432980]]},
+  {name:"    Wiese , Grundstück Nr. 20 ",type:"polygon",coords:[[52.205864,9.422461],[52.205391,9.422997],[52.205108,9.423941],[52.206272,9.423212]]},
+  {name:"Wiese, Grundstück Nr. 21 ",type:"polygon",coords:[[52.204687,9.425100],[52.204747,9.425840],[52.204257,9.425985],[52.204201,9.425250]]},
+  {name:"Großseggenried , Grundstück Nr. 22",type:"polygon",coords:[[52.205726,9.446912],[52.204516,9.449315],[52.204227,9.448757]]},
+  {name:"Großseggenried, Grünland mit Feuchtbereich (Schilfbestand) , Grundstück Nr. 24 ",type:"polygon",coords:[[52.207968,9.422225],[52.207567,9.423716],[52.207219,9.423416],[52.207140,9.423925],[52.207791,9.424210],[52.208133,9.422300]]},
+  {name:"Großseggenried, Grünland mit Feuchtbereich (Schilfbestand) , Grundstück Nr. 24",type:"polygon",coords:[[52.207725,9.422085],[52.207949,9.422203],[52.207567,9.423748],[52.207248,9.423389],[52.207350,9.422804]]},
+  {name:"Feuchtwiese mit Sumpfdotterblumen , Grundstück Nr. 25 ",type:"polygon",coords:[[52.207732,9.422042],[52.207853,9.421822],[52.208172,9.422112],[52.208133,9.422278]]},
+  {name:"Grünland am Bach,  Grundstück Nr. 26",type:"polygon",coords:[[52.208379,9.416501],[52.208432,9.416335],[52.208452,9.416501],[52.208754,9.416968],[52.208632,9.417365]]},
+  {name:"Weide , Grundstück Nr. 27",type:"polygon",coords:[[52.204194,9.425256],[52.204257,9.426007],[52.203754,9.426109],[52.203698,9.425406]]},
+  {name:"Feldgehölz mit 2 Teichen und 1 Absenkbecken , Grundstück Nr. 28 ",type:"polygon",coords:[[52.190667,9.433243],[52.190799,9.433157],[52.190753,9.436741],[52.190384,9.436580]]},
+  {name:"Rückführung in extensives Grünland, Bepflanzung des  Hameluferrandes mit standortgerechten Gehölzen , Grundstück Nr. 29 ",type:"polygon",coords:[[52.178596,9.474206],[52.179027,9.475263],[52.178988,9.475392],[52.179093,9.475654],[52.179070,9.475821],[52.179004,9.475923],[52.178425,9.474522]]},
+  {name:"Grünland mit Feuchtinseln , Grundstück Nr. 30 ",type:"polygon",coords:[[52.160915,9.491565],[52.160218,9.491823],[52.160060,9.492466],[52.160191,9.494076],[52.160560,9.494076],[52.160744,9.492574],[52.160784,9.492037],[52.161047,9.491887]]},
+  {name:"Grünland mit Feuchtinseln, Quellbereich , Grundstück Nr. 31 ",type:"polygon",coords:[[52.205148,9.423920],[52.206463,9.425261],[52.205555,9.425561]]},
+  {name:"Grünland mit Feuchtinseln, Quellbereich , Grundstück Nr. 31",type:"polygon",coords:[[52.205194,9.423909],[52.206272,9.423190],[52.206739,9.423898],[52.206469,9.425218]]},
+  {name:"Grünland mit Graben , Grundstück Nr. 32 ",type:"polygon",coords:[[52.204247,9.424274],[52.204332,9.425186],[52.203326,9.425529],[52.203155,9.424542],[52.203925,9.424220]]},
+  {name:"Grünland mit Graben , Grundstück Nr. 32 ",type:"polygon",coords:[[52.202965,9.424735],[52.203142,9.424542],[52.203333,9.425508],[52.203090,9.425626]]},
+  {name:"Mit Bäumen bestandene Gehölzfläche mit baumfreien  Trockenrasenflächen , Grundstück Nr. 33 ",type:"polygon",coords:[[52.204490,9.436913],[52.205463,9.437041],[52.205207,9.438951],[52.204188,9.438704]]},
+  {name:" Streuobstwiese, Grundstück Nr. 34",type:"polygon",coords:[[52.189917,9.442631],[52.190621,9.442545],[52.190621,9.443736],[52.189635,9.444079]]},
+  {name:"Brachland, Grundstück Nr. 35 ",type:"polygon",coords:[[52.192456,9.441569],[52.192568,9.441569],[52.192430,9.445260],[52.192325,9.445174]]},
+  {name:" Streuobstwiese, Grundstück Nr. 36",type:"polygon",coords:[[52.232662,9.434595],[52.232741,9.433973],[52.234265,9.435046],[52.234200,9.435647]]},
+  {name:"Magerwiese mit Streuobstbestand im unteren Bereich  und Feldgehölzen, Grundstück Nr. 37",type:"polygon",coords:[[52.212314,9.438275],[52.211998,9.439766],[52.213990,9.439938],[52.213832,9.438565]]}
+];
+featureLayers.team_badmuender_nabu = L.layerGroup();
+bmData.forEach(function(d) {
+  var fn = (d.type === 'polyline') ? L.polyline : L.polygon;
+  fn(d.coords, {color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.2})
+    .bindPopup('<strong>'+d.name.trim()+'</strong><br><em style="color:#c6a700;">NABU-Fläche Bad Münder</em>')
+    .addTo(featureLayers.team_badmuender_nabu);
+});
+
+// Ökologische Potenzialflächen Aerzen Nord (Polylinien) -> Schutzobjekte (grün)
+const aerzenNordData = [
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.084202,9.270655],[52.085494,9.272285],[52.083939,9.274044]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.083754,9.273658],[52.084018,9.270569]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.087339,9.272843],[52.087709,9.271684]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.081091,9.260872],[52.080221,9.263232]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.081671,9.266150],[52.082489,9.266579]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.077611,9.263704],[52.072179,9.267394]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.074183,9.264219],[52.072311,9.266407]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.075053,9.266664],[52.074447,9.269024],[52.071836,9.268381]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.074051,9.277991],[52.074579,9.280051]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.073682,9.277605],[52.071361,9.277648]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.069489,9.298500],[52.069858,9.301589]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.075871,9.309269],[52.072548,9.311372]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.075844,9.309999],[52.072944,9.312058]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.069278,9.314761],[52.070966,9.321240]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.070597,9.317078],[52.071652,9.320768]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.072047,9.322098],[52.072627,9.324372]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.067168,9.316606],[52.066825,9.317035]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.067722,9.318108],[52.068039,9.319867]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.068329,9.320854],[52.068540,9.322399]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.067274,9.318923],[52.067511,9.319738]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.066426,9.317064],[52.066215,9.316957]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.065397,9.317987],[52.065556,9.317901]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.064422,9.320754],[52.064606,9.320690]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.063287,9.305909],[52.062114,9.306081]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.064281,9.304356],[52.063734,9.303755]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.064854,9.303654],[52.064791,9.303649]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.064633,9.301386],[52.063321,9.301986]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.081330,9.259718],[52.079300,9.255170],[52.077191,9.253926]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.073684,9.253539],[52.073130,9.260490]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.069623,9.259846],[52.068832,9.261691]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.068779,9.261776],[52.066907,9.263149]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.066247,9.264179],[52.065219,9.268169]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.066511,9.268813],[52.065773,9.268341]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.065034,9.270100],[52.064718,9.271216]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.064032,9.274562],[52.063267,9.276836]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.059944,9.275892],[52.058704,9.270615]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.060160,9.299004],[52.060424,9.301213]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.060411,9.301857],[52.060978,9.307606]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.054330,9.269203],[52.054593,9.269589]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.052114,9.271284],[52.052905,9.273472]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.049284,9.275598],[52.050709,9.280833]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.050465,9.268495],[52.049277,9.269653]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.048816,9.269996],[52.048130,9.270575]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.049911,9.267787],[52.049963,9.268602]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.049343,9.267036],[52.049541,9.268730]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.049017,9.263558],[52.049004,9.264223]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.048832,9.260802],[52.051226,9.262754]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.051862,9.262466],[52.052997,9.262873]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.053946,9.253692],[52.054381,9.255838]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.053233,9.254057],[52.053589,9.256116]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.056109,9.264206],[52.055199,9.266395]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.060292,9.264571],[52.058537,9.263069]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.062917,9.264549],[52.062231,9.264592]]},
+  {name:"Unbenannt",type:"polyline",coords:[[52.062812,9.265129],[52.062363,9.265129]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.054880,9.225708],[52.054511,9.230772]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.064398,9.247840],[52.061945,9.247926]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.064952,9.247754],[52.066034,9.248570]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.064820,9.247668],[52.063976,9.249857]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.065902,9.248698],[52.065156,9.250917]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.065130,9.250832],[52.064022,9.249845]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.065895,9.237528],[52.070116,9.242935]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.066897,9.233923],[52.071276,9.238815]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.072121,9.232206],[52.069483,9.226885]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.072305,9.225941],[52.072727,9.226627]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.073017,9.227228],[52.073017,9.228258]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.071672,9.221478],[52.071382,9.223194]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.072384,9.215040],[52.072569,9.216413]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.076921,9.218473],[52.075972,9.219933]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.067557,9.215899],[52.065921,9.216371]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.061462,9.197273],[52.060750,9.198732]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.060618,9.196029],[52.060539,9.197316]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.068586,9.185300],[52.069588,9.190192]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",type:"polyline",coords:[[52.066845,9.183369],[52.067478,9.183326]]},
+  {name:"Ökolog. Potenzialflächen Aerzen Nord",type:"polyline",coords:[[52.080244,9.188819],[52.079084,9.191394]]},
+  {name:"Ökolog. Potenzialflächen Aerzen Nord",type:"polyline",coords:[[52.083066,9.209032],[52.082750,9.212594]]},
+  {name:"Ökolog. Potenzialflächen Aerzen Nord",type:"polyline",coords:[[52.083462,9.221992],[52.083093,9.228687]]}
+];
+featureLayers.team_aerzen_nord = L.layerGroup();
+aerzenNordData.forEach(function(d) {
+  var fn = (d.type === 'polygon') ? L.polygon : L.polyline;
+  fn(d.coords, {color:'#4caf50',weight:3,opacity:0.8,fillColor:'#4caf50',fillOpacity:0.2})
+    .bindPopup('<strong>'+d.name.trim()+'</strong><br><em style="color:#4caf50;">Ökologische Potenzialfläche — Aerzen Nord</em>')
+    .addTo(featureLayers.team_aerzen_nord);
+});
+
+// Ökologische Potenzialflächen Aerzen Süd (Polylinien + 1 Polygon) -> Schutzobjekte (grün)
+const aerzenSuedData = [
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.035993,9.248257],[52.035149,9.248943]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.026977,9.230318],[52.026185,9.230554]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.027056,9.230747],[52.026396,9.230897]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.028508,9.227378],[52.029235,9.227829]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.028429,9.227893],[52.029116,9.228258]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.031994,9.227979],[52.031268,9.228473]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.024746,9.224567],[52.024085,9.223924]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.024746,9.224181],[52.024495,9.223022]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.023267,9.222078],[52.022739,9.221585],[52.021762,9.220748]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.021550,9.220576],[52.020085,9.219911]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.015832,9.213431],[52.017034,9.215791]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.014802,9.207873],[52.015476,9.209847]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.015938,9.200170],[52.015304,9.200449]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.016004,9.201329],[52.015383,9.201608]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.016229,9.202681],[52.015555,9.202981]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.008529,9.203517],[52.007723,9.206350]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.009137,9.206007],[52.007921,9.206350]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.007644,9.205556],[52.007261,9.206629]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polygon",coords:[[52.036073,9.210749],[52.034093,9.211693],[52.034515,9.213281],[52.036442,9.212122]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.042382,9.215984],[52.044731,9.224868]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.044203,9.247828],[52.040930,9.243021]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.045312,9.241648],[52.042303,9.244652]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.047476,9.246197],[52.041352,9.237270],[52.039557,9.234180],[52.036759,9.236670]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.039399,9.233923],[52.037657,9.228945]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.040745,9.248643],[52.039003,9.247570]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.040006,9.249887],[52.038818,9.248385]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.045127,9.251518],[52.044757,9.252119],[52.043095,9.250617]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.044731,9.251947],[52.043913,9.253793],[52.042144,9.251647]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.047265,9.257140],[52.044810,9.254351]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.047978,9.255638],[52.045153,9.252720]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.043147,9.250574],[52.041986,9.249287]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.042197,9.251604],[52.041009,9.250317]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.039874,9.250917],[52.042276,9.254007]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.042408,9.254522],[52.041722,9.255424]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.044045,9.254093],[52.044969,9.255080]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.043517,9.254909],[52.044071,9.255681]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.046631,9.258814],[52.047080,9.259243]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.037287,9.254951],[52.037762,9.257569]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.036601,9.255638],[52.036891,9.257827]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.038211,9.263706],[52.040033,9.262247],[52.040745,9.265380]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.041247,9.266109],[52.042382,9.267569],[52.045285,9.265809],[52.046552,9.264994]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.039346,9.266710],[52.039161,9.266067]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.048294,9.263513],[52.048083,9.263835]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.048453,9.268405],[52.048123,9.268727]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.046275,9.270036],[52.045892,9.270229]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.043385,9.271774],[52.043754,9.272783]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.044414,9.274199],[52.046697,9.279091]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.039689,9.271302],[52.040191,9.273491]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.038449,9.272375],[52.038924,9.274178]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.037076,9.270616],[52.037525,9.272633]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.036997,9.268298],[52.037155,9.268985]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.035782,9.269843],[52.035861,9.270315]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.031479,9.276752],[52.031901,9.278855]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.022131,9.261732],[52.022607,9.264736]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.031796,9.286966],[52.031848,9.287782]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.021682,9.287310],[52.018724,9.289370],[52.016796,9.290013]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.013785,9.290528],[52.011672,9.295721],[52.011461,9.298854],[52.012465,9.301085],[52.014287,9.303575]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.012676,9.312887],[52.010220,9.313531],[52.009137,9.307952],[52.011567,9.307008]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.011567,9.305463],[52.011250,9.303617]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.011091,9.301944],[52.011672,9.302244]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.043358,9.197359],[52.042672,9.197531]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.042091,9.198647],[52.041564,9.198604]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.005385,9.210663],[52.004170,9.211822]]}
+];
+featureLayers.team_aerzen_sued = L.layerGroup();
+aerzenSuedData.forEach(function(d) {
+  var fn = (d.type === 'polygon') ? L.polygon : L.polyline;
+  fn(d.coords, {color:'#4caf50',weight:3,opacity:0.8,fillColor:'#4caf50',fillOpacity:0.2})
+    .bindPopup('<strong>'+d.name.trim()+'</strong><br><em style="color:#4caf50;">Ökologische Potenzialfläche — Aerzen Süd</em>')
+    .addTo(featureLayers.team_aerzen_sued);
+});
 
 // Bedrohungen
 featureLayers.team_bedrohungen = L.layerGroup();
