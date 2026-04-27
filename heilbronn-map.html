@@ -430,7 +430,7 @@ async function checkPw(){
     <div class="cat-header">
       <span class="arrow" id="arrow-cat-schutzobjekt" onclick="toggleCat('cat-schutzobjekt')">▼</span>
       <h2 style="color:#4caf50; margin:0; flex:1;" onclick="toggleCat('cat-schutzobjekt')">Schutzobjekte/-gebiete</h2>
-      <div class="cat-toggle" id="cattgl-schutzobjekt" onclick="toggleCatLayers('schutzobjekt',['team_nachtigalleninsel','team_weinbergsbrachen','team_rebhuhngebiete','team_potenz_rebhuhn','team_rastplatz','team_feuchtgebiet'])"></div>
+      <div class="cat-toggle" id="cattgl-schutzobjekt" onclick="toggleCatLayers('schutzobjekt',['team_nachtigalleninsel','team_weinbergsbrachen','team_rebhuhngebiete','team_potenz_rebhuhn','team_rastplatz','team_feuchtgebiete','team_waldheide'])"></div>
     </div>
     <div class="cat-body" id="cat-schutzobjekt" style="max-height:500px;">
       <div class="feature-item" onclick="toggleFeature('team_nachtigalleninsel')">
@@ -458,23 +458,33 @@ async function checkPw(){
         <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
         <div class="feature-label">Rastplatz Migrierende Vogelart</div>
       </div>
-      <div class="feature-item" onclick="toggleFeature('team_feuchtgebiet')">
-        <div class="checkbox" id="check-team_feuchtgebiet"></div>
+      <div class="feature-item" onclick="toggleFeature('team_feuchtgebiete')">
+        <div class="checkbox" id="check-team_feuchtgebiete"></div>
         <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
-        <div class="feature-label">Feuchtgebiet</div>
+        <div class="feature-label">Feuchtgebiete (3)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_waldheide')">
+        <div class="checkbox" id="check-team_waldheide"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Waldheide</div>
       </div>
     </div>
 
     <div class="cat-header">
       <span class="arrow" id="arrow-cat-bedrohung" onclick="toggleCat('cat-bedrohung')">▼</span>
       <h2 style="color:#d32f2f; margin:0; flex:1;" onclick="toggleCat('cat-bedrohung')">Bedrohungen</h2>
-      <div class="cat-toggle" id="cattgl-bedrohung" onclick="toggleCatLayers('bedrohung',['team_windkraft'])"></div>
+      <div class="cat-toggle" id="cattgl-bedrohung" onclick="toggleCatLayers('bedrohung',['team_windkraft','team_ipai'])"></div>
     </div>
     <div class="cat-body" id="cat-bedrohung" style="max-height:500px;">
       <div class="feature-item" onclick="toggleFeature('team_windkraft')">
         <div class="checkbox" id="check-team_windkraft"></div>
         <div class="feature-dot" style="background:#d32f2f; border-color:#b71c1c;"></div>
         <div class="feature-label">Windkraftentwicklung (2)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_ipai')">
+        <div class="checkbox" id="check-team_ipai"></div>
+        <div class="feature-dot" style="background:#d32f2f; border-color:#b71c1c;"></div>
+        <div class="feature-label">KI Entwicklungszentrum IPAI</div>
       </div>
     </div>
 
@@ -743,15 +753,31 @@ featureLayers.team_rastplatz = L.polygon([[49.126199,9.392281],[49.126859,9.3887
   {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.20})
 .bindPopup('<strong>Rastplatz Migrierende Vogelart</strong><br><em>Insbesondere Wasservögel</em>');
 
-featureLayers.team_feuchtgebiet = L.polygon([[49.163045,8.939481],[49.162821,8.937335],[49.161951,8.936133],[49.160772,8.935318],[49.159313,8.93476],[49.158387,8.934889],[49.157096,8.935318],[49.156506,8.935833],[49.155804,8.93652],[49.155103,8.937593],[49.154598,8.939781],[49.155271,8.940854],[49.15746,8.941541],[49.160548,8.940597],[49.162484,8.940425]],
+featureLayers.team_feuchtgebiete = L.layerGroup([
+  L.polygon([[49.163045,8.939481],[49.162821,8.937335],[49.161951,8.936133],[49.160772,8.935318],[49.159313,8.93476],[49.158387,8.934889],[49.157096,8.935318],[49.156506,8.935833],[49.155804,8.93652],[49.155103,8.937593],[49.154598,8.939781],[49.155271,8.940854],[49.15746,8.941541],[49.160548,8.940597],[49.162484,8.940425]],
+    {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.25})
+  .bindPopup('<strong>Feuchtgebiet (West)</strong><br><em style="color:#4caf50;">Schutzobjekt/-gebiet</em>'),
+  L.polygon([[49.13781,9.25375],[49.137052,9.253922],[49.135985,9.254007],[49.134638,9.253964],[49.134385,9.252548],[49.134076,9.252548],[49.133599,9.253192],[49.133037,9.252934],[49.132532,9.254608],[49.131352,9.254308],[49.131408,9.253621],[49.129106,9.25405],[49.128769,9.254436],[49.12846,9.253578],[49.127505,9.253707],[49.122506,9.250102],[49.121017,9.250445],[49.120119,9.250402],[49.118181,9.249372],[49.118012,9.250574],[49.118153,9.252033],[49.117984,9.253149],[49.116945,9.254136],[49.117366,9.254522],[49.117956,9.25405],[49.118377,9.252892],[49.118321,9.25139],[49.118686,9.250402],[49.119613,9.250445],[49.120428,9.252205],[49.121495,9.250832],[49.126775,9.255981],[49.128376,9.256539],[49.12919,9.256196],[49.130987,9.254951],[49.132504,9.255166],[49.132869,9.255681],[49.133374,9.255638],[49.133346,9.254994],[49.134357,9.254522],[49.135676,9.255123],[49.136435,9.255037],[49.13708,9.254608]],
+    {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.25})
+  .bindPopup('<strong>Feuchtgebiete (Zentral / Sulm-Lein)</strong><br><em style="color:#4caf50;">Schutzobjekt/-gebiet</em>'),
+  L.polygon([[49.046954,9.159422],[49.044999,9.161417],[49.04521,9.162533],[49.044254,9.163413],[49.044198,9.163971],[49.044099,9.165108],[49.043888,9.165065],[49.044043,9.167275],[49.043705,9.16734],[49.04431,9.170408],[49.04334,9.169979],[49.042003,9.167876],[49.041483,9.166417],[49.041455,9.165924],[49.041947,9.164228],[49.042411,9.162726],[49.043424,9.160945],[49.044577,9.16013]],
+    {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.25})
+  .bindPopup('<strong>Feuchtgebiete (Süd / Zaberauen)</strong><br><em style="color:#4caf50;">Schutzobjekt/-gebiet</em>'),
+]);
+
+featureLayers.team_waldheide = L.polygon([[49.133262,9.272246],[49.130075,9.272225],[49.129836,9.271817],[49.129022,9.271688],[49.128853,9.272075],[49.127561,9.272203],[49.127435,9.272847],[49.12655,9.272954],[49.126452,9.272525],[49.125736,9.272461],[49.125595,9.273298],[49.125385,9.273384],[49.124655,9.273233],[49.124388,9.272139],[49.123321,9.272525],[49.123461,9.274006],[49.124233,9.274006],[49.125329,9.274585],[49.125652,9.274414],[49.127168,9.275959],[49.12985,9.275937],[49.130201,9.276366],[49.130566,9.276044],[49.132546,9.27628],[49.133458,9.276946],[49.133725,9.276538]],
   {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.25})
-.bindPopup('<strong>Feuchtgebiet</strong>');
+.bindPopup('<strong>Waldheide</strong><br><em style="color:#4caf50;">Schutzobjekt/-gebiet</em>');
 
 // ── Bedrohungen (rot) ──
 featureLayers.team_windkraft = L.layerGroup([
   L.polygon([[49.121748,9.003296],[49.108939,8.994026],[49.099161,8.997803],[49.094553,9.014969],[49.095677,9.041061],[49.096689,9.060974],[49.10096,9.107151],[49.112759,9.126377],[49.130173,9.121056],[49.135789,9.105091],[49.135452,9.062347],[49.132869,9.032135]],{color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.15}).bindPopup('<strong>Windkraftentwicklung — Windpark Heuchelberg</strong>'),
   L.polygon([[49.057614,9.320269],[49.05812,9.304304],[49.054351,9.29512],[49.049289,9.29306],[49.045857,9.303017],[49.041019,9.317093],[49.041469,9.323702],[49.044901,9.3328],[49.048895,9.340181],[49.054014,9.337435],[49.056995,9.329453]],{color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.15}).bindPopup('<strong>Windkraftentwicklung (Süd)</strong>'),
 ]);
+
+featureLayers.team_ipai = L.polygon([[49.184649,9.192724],[49.183358,9.189978],[49.181956,9.188004],[49.181058,9.187875],[49.180104,9.187317],[49.178758,9.186673],[49.178533,9.193583],[49.178365,9.195514],[49.180104,9.195685],[49.181451,9.195857],[49.183863,9.197659],[49.184509,9.195943]],
+  {color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.20})
+.bindPopup('<strong>KI Entwicklungszentrum IPAI</strong><br><em style="color:#d32f2f;">Bedrohung — Flächenverbrauch</em><br><span style="font-size:10px;color:#666;">Innovation Park Artificial Intelligence, Heilbronn</span>');
 
 // ── NABU Aktivitäten (lila) ──
 featureLayers.team_nabu_gruppen = L.layerGroup([
