@@ -453,13 +453,13 @@ async function checkPw(){
     <div class="cat-header">
       <span class="arrow collapsed" id="arrow-cat-scope" onclick="toggleCat('cat-scope')">▼</span>
       <h2 style="color:#1565c0; margin:0; flex:1;" onclick="toggleCat('cat-scope')">Scope / Rahmen</h2>
-      <div class="cat-toggle" id="cattgl-scope" onclick="toggleCatLayers('scope',['team_scope_idee1'])"></div>
+      <div class="cat-toggle" id="cattgl-scope" onclick="toggleCatLayers('scope',['team_scope_rahmen'])"></div>
     </div>
     <div class="cat-body collapsed" id="cat-scope" style="max-height:500px;">
-      <div class="feature-item" onclick="toggleFeature('team_scope_idee1')">
-        <div class="checkbox" id="check-team_scope_idee1"></div>
+      <div class="feature-item" onclick="toggleFeature('team_scope_rahmen')">
+        <div class="checkbox" id="check-team_scope_rahmen"></div>
         <div class="feature-dot" style="background:#1565c0; border-color:#0d47a1;"></div>
-        <div class="feature-label">Landschaft Idee 1</div>
+        <div class="feature-label">Landschaftsrahmen</div>
       </div>
     </div>
 
@@ -657,11 +657,11 @@ console.log('Kreisgrenzen geladen (BKG eingebettet):', kreisData.features.length
 
 // ============ TEAM-EINTRAEGE ============
 
-// Scope: Landschaft Idee 1
-featureLayers.team_scope_idee1 = L.layerGroup();
+// Scope: Landschaftsrahmen
+featureLayers.team_scope_rahmen = L.layerGroup();
 L.polygon([[51.693416,13.674545],[51.677239,13.658752],[51.678516,13.648453],[51.676387,13.62236],[51.66489,13.570862],[51.624411,13.514557],[51.623132,13.436279],[51.593282,13.396454],[51.5664,13.41362],[51.532669,13.464432],[51.505751,13.539963],[51.497736,13.572235],[51.488973,13.590603],[51.347341,13.787155],[51.28597,14.168243],[51.247304,14.577484],[51.35849,14.967499],[51.468125,14.957886],[51.525834,14.736099],[51.562559,14.714813],[51.610342,14.763565],[51.68618,14.739532],[51.7098,14.687691],[51.738723,14.658165],[51.754453,14.659882],[51.763803,14.652672],[51.783772,14.654045],[51.798424,14.635162],[51.802671,14.609413],[51.820925,14.587097],[51.835565,14.587784],[51.855715,14.624519],[51.88963,14.667091],[51.900859,14.690781],[51.900118,14.473286],[51.883697,14.420071],[51.865256,14.416122],[51.860486,14.392776],[51.86462,14.26712],[51.872676,14.188156],[51.901071,14.190903],[51.927331,14.16687],[51.91505,14.107132],[51.940032,14.041901],[51.944688,13.973923],[51.927331,13.891525],[51.861228,13.830414],[51.785683,13.694458],[51.715969,13.698578]], {color:'#1565c0',weight:3,fillColor:'#1565c0',fillOpacity:0.05,dashArray:'10,6',interactive:false})
-  .bindPopup('<strong>Landschaft Idee 1</strong><br><em style="color:#1565c0;">Scope-Vorschlag · Lausitz</em>')
-  .addTo(featureLayers.team_scope_idee1);
+  .bindPopup('<strong>Landschaftsrahmen</strong><br><em style="color:#1565c0;">Scope-Vorschlag · Lausitz</em>')
+  .addTo(featureLayers.team_scope_rahmen);
 
 // NABU Aktivitäten: NABU-Gruppen (3 Standorte)
 featureLayers.team_nabu_gruppen = L.layerGroup();
