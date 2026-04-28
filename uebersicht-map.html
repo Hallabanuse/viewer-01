@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zukunftslandschaften — Übersicht (Lausitz · Weserbergland · Heilbronn)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/shp-write@0.3.2/shpwrite.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #2c3e50; color: #e0e0e0; }
+
+  #map { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+  #panel {
+    position: fixed; top: 0; right: 0; width: 440px; height: 100vh; z-index: 1000;
+    background: rgba(30, 40, 50, 0.95); backdrop-filter: blur(8px);
+    border-left: 1px solid rgba(255,255,255,0.15);
+    overflow-y: auto; padding: 15px 20px 30px;
+    transition: transform 0.3s ease;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+  }
+  #panel.collapsed { transform: translateX(440px); }
+
+  #toggle-panel {
+    position: fixed; top: 10px; right: 450px; z-index: 1001;
+    background: rgba(30, 40, 50, 0.9); color: #eee; border: none;
+    padding: 8px 12px; border-radius: 6px 0 0 6px; cursor: pointer;
+    font-size: 14px; transition: right 0.3s ease;
+  }
+  #toggle-panel.collapsed { right: 10px; border-radius: 6px; }
+
+  h1 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 16px; }
+  h2 { font-size: 13px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin: 18px 0 8px; }
+
+  .cat-header { cursor:pointer; display:flex; align-items:center; gap:6px; user-select:none; }
+  .cat-header:hover { opacity:0.8; }
+  .cat-toggle { width:14px; height:14px; border-radius:3px; border:1.5px solid #666;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s; margin-left:auto; }
+  .cat-toggle.checked { border-color:#64b5f6; background:rgba(100,180,255,0.2); }
+  .cat-toggle.checked::after { content:'✓'; font-size:10px; color:#64b5f6; }
+  .cat-header .arrow { font-size:10px; transition:transform 0.2s; }
+  .cat-header .arrow.collapsed { transform:rotate(-90deg); }
+  .cat-body { overflow:hidden; transition:max-height 0.2s; }
+  .cat-body.collapsed { max-height:0 !important; }
+
+  .feature-item {
+    display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+    border-radius: 6px; cursor: pointer; transition: background 0.2s; margin-bottom: 2px;
+  }
+  .feature-item:hover { background: rgba(255,255,255,0.05); }
+  .feature-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.3); }
+  .feature-rect { width: 14px; height: 10px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.3); border-radius: 2px; }
+  .feature-label { font-size: 11.5px; color: #ccc; }
+  .feature-source { font-size: 9.5px; color: #777; margin-left: auto; font-style: italic; white-space: nowrap; }
+
+  .checkbox { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid #666;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+  .checkbox.checked { border-color: #64b5f6; background: rgba(100,180,255,0.2); }
+  .checkbox.checked::after { content: '✓'; font-size: 10px; color: #64b5f6; }
+
+  .info-box {
+    background: rgba(255,193,63,0.08); border: 1px solid rgba(255,193,63,0.2);
+    border-radius: 6px; padding: 10px; margin: 10px 0;
+  }
+  .info-box p { font-size: 11px; color: #ccc; line-height: 1.5; }
+  .info-box .label { color: #ffc03f; font-weight: 600; font-size: 11px; margin-bottom: 4px; }
+
+  .tab-bar { display: flex; gap: 2px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: #999; transition: all 0.2s;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,0.1); color: #ccc; }
+  .tab-btn.active { background: rgba(100,180,255,0.15); border-color: rgba(100,180,255,0.3); color: #90caf9; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .leaflet-popup-content-wrapper {
+    background: #fff !important; color: #333 !important;
+    border: 2px solid rgba(0,0,0,0.2) !important; border-radius: 8px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+  }
+  .leaflet-popup-tip { background: #fff !important; }
+  .leaflet-popup-content { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 12px; line-height: 1.5; color: #333; }
+
+  .footer {
+    margin-top: 16px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 10px; color: #555; line-height: 1.5;
+  }
+
+  /* Zeichenwerkzeug */
+  #draw-export {
+    display:none; position:fixed; bottom:20px; right:460px;
+    background:rgba(30,40,45,0.95); color:#eee; padding:12px 16px;
+    border-radius:8px; z-index:2000; max-width:420px; max-height:40vh;
+    overflow-y:auto; font-size:12px; backdrop-filter:blur(8px);
+  }
+  #draw-export pre {
+    background:#1a1a2e; padding:10px; border-radius:4px; font-size:11px;
+    line-height:1.4; overflow-x:auto; white-space:pre-wrap; word-break:break-all;
+    margin:8px 0; max-height:30vh; overflow-y:auto;
+  }
+  #draw-export button {
+    background:#43a047; color:#fff; border:none; padding:6px 14px;
+    border-radius:4px; cursor:pointer; margin:4px 4px 4px 0; font-size:12px;
+  }
+  #draw-export button:hover { background:#4caf50; }
+  #draw-export button.danger { background:#c62828; }
+  #draw-export .count { color:#81c784; font-weight:bold; }
+
+  /* Kategorie-Picker */
+  #category-bar {
+    position:fixed; top:380px; left:10px;
+    display:flex; flex-direction:column; gap:3px; z-index:1500;
+    background:rgba(30,40,45,0.92);
+    padding:6px 8px; border-radius:6px; backdrop-filter:blur(8px);
+    max-width:140px;
+  }
+  .cat-btn {
+    padding:4px 8px; border-radius:4px; font-size:10px; font-weight:600;
+    cursor:pointer; border:2px solid transparent; color:#fff; opacity:0.6;
+    transition:all 0.2s; text-align:left;
+  }
+  .cat-btn:hover { opacity:0.85; }
+  .cat-btn.active { opacity:1; border-color:#fff; }
+  #coords-display {
+    position:fixed; bottom:8px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.7); color:#eee; padding:4px 12px;
+    border-radius:4px; font-size:11px; z-index:1500; font-family:monospace;
+  }
+  /* Shape-Labels */
+  .shape-label { font-size:14px; font-weight:600; padding:2px 5px; background:rgba(255,255,255,0.85);
+    border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.3); white-space:nowrap; }
+  /* Text-Notizen */
+  .map-note {
+    background: rgba(55,55,55,0.92); color:#fff; padding:4px 8px;
+    border-radius:4px; font-size:14px; font-weight:700; white-space:nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3); border:1px solid #888;
+    font-family:'Segoe UI',sans-serif;
+  }
+  /* Export-Buttons */
+  .export-bar {
+    position:fixed; top:10px; right:500px; z-index:1500;
+    display:flex; gap:4px; transition:right 0.3s;
+  }
+  .export-bar.panel-collapsed { right:50px; }
+  .export-btn {
+    background:rgba(30,40,45,0.9); color:#eee; border:none;
+    padding:6px 12px; border-radius:6px; cursor:pointer;
+    font-size:12px; backdrop-filter:blur(8px);
+  }
+  .export-btn:hover { background:rgba(50,60,65,0.95); }
+  .export-btn.busy { opacity:0.5; cursor:wait; }
+  .export-btn.active-mode { background:#1565c0; color:#fff; }
+  #map.select-mode { cursor:pointer !important; }
+  /* Basiskarte etwas blasser */
+  .leaflet-tile-pane { opacity: 0.6; }
+  /* Custom Modal */
+  .modal-overlay {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.6); z-index:99999;
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(2px);
+  }
+  .modal-box {
+    background:#1e2832; border:1px solid rgba(255,255,255,0.2);
+    border-radius:10px; padding:22px 24px; min-width:320px; max-width:460px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  }
+  .modal-box .modal-msg {
+    color:#e0e0e0; font-size:13px; line-height:1.6; margin-bottom:16px; white-space:pre-line;
+  }
+  .modal-box input[type="text"] {
+    width:100%; padding:8px 10px; background:#111; color:#e0e0e0;
+    border:1px solid #444; border-radius:6px; font-size:13px; margin-bottom:14px;
+    font-family:inherit;
+  }
+  .modal-box input[type="text"]:focus { outline:none; border-color:#64b5f6; }
+  .modal-btns { display:flex; gap:8px; justify-content:flex-end; }
+  .modal-btns button {
+    padding:7px 18px; border:none; border-radius:6px; cursor:pointer;
+    font-size:12px; font-weight:600; font-family:inherit;
+  }
+  .modal-btns .btn-ok { background:#3f7fbf; color:#fff; }
+  .modal-btns .btn-ok:hover { background:#4a90d9; }
+  .modal-btns .btn-cancel { background:#444; color:#ccc; }
+  .modal-btns .btn-cancel:hover { background:#555; }
+</style>
+</head>
+<body>
+
+<!-- Password Gate -->
+<div id="pw-gate" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;
+  background:#1a2530;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+  <div style="text-align:center;max-width:360px;padding:30px;">
+    <div style="font-size:36px;margin-bottom:16px;">🗺️</div>
+    <h1 style="font-size:20px;color:#fff;margin-bottom:6px;">Zukunftslandschaften — Übersicht</h1>
+    <p style="font-size:13px;color:#888;margin-bottom:24px;">Zugang nur für Projektbeteiligte</p>
+    <input id="pw-input" type="password" placeholder="Passwort eingeben"
+      style="width:100%;padding:12px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);
+      background:rgba(255,255,255,0.08);color:#fff;font-size:14px;outline:none;text-align:center;"
+      onkeydown="if(event.key==='Enter')checkPw()">
+    <button onclick="checkPw()"
+      style="margin-top:12px;width:100%;padding:12px;border-radius:8px;border:none;
+      background:#1565c0;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Öffnen</button>
+    <p id="pw-error" style="color:#ef5350;font-size:12px;margin-top:10px;display:none;">Falsches Passwort</p>
+  </div>
+</div>
+<script>
+async function hashStr(s){const e=new TextEncoder().encode(s);const h=await crypto.subtle.digest('SHA-256',e);return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+async function checkPw(){
+  const v=document.getElementById('pw-input').value;
+  const h=await hashStr(v);
+  if(h==='a4a053f8431b89fe93894777ce543c91d1303b19941bc281af332b8cbb9adee8'){document.getElementById('pw-gate').style.display='none';}
+  else{document.getElementById('pw-error').style.display='block';document.getElementById('pw-input').value='';document.getElementById('pw-input').focus();}
+}
+</script>
+
+<div id="map"></div>
+<div id="custom-cursor"></div>
+<div id="category-bar">
+  <div class="cat-btn active" style="background:#1565c0;" onclick="setCategory('scope','#1565c0',this)">Scope / Rahmen</div>
+  <div class="cat-btn" style="background:#4caf50;" onclick="setCategory('schutzobjekt','#4caf50',this)">Schutzobjekte/-gebiete</div>
+  <div class="cat-btn" style="background:#d32f2f;" onclick="setCategory('bedrohung','#d32f2f',this)">Bedrohungen</div>
+  <div class="cat-btn" style="background:#c6a700;" onclick="setCategory('nabu','#c6a700',this)">NABU Aktivitäten</div>
+  <div class="cat-btn" style="background:#555; border:1px solid #888; color:#fff;" onclick="addTextNote()">📝 Notiz</div>
+</div>
+<div class="export-bar" id="export-bar">
+  <button class="export-btn" id="screenshot-btn" onclick="takeScreenshot()">📷 PNG</button>
+  <button class="export-btn" id="select-mode-btn" onclick="toggleSelectMode()">✋ Auswählen</button>
+  <button class="export-btn" id="export-selected-btn" onclick="exportShapefile('selected')" style="display:none;">📦 Export (<span id="select-count">0</span>)</button>
+  <button class="export-btn" id="clear-selection-btn" onclick="clearSelection()" style="display:none;">✕</button>
+</div>
+<div id="coords-display">Maus bewegen für Koordinaten</div>
+<div id="draw-export">
+  <strong>Gezeichnete Features</strong> — <span id="draw-count" class="count">0</span> Objekte
+  <pre id="draw-json" style="display:none;"></pre>
+  <button onclick="copyDrawJSON()">In Zwischenablage kopieren</button>
+  <button onclick="clearDrawn()" class="danger">Alle löschen</button>
+</div>
+
+<button id="toggle-panel" onclick="togglePanel()">&#9776;</button>
+<div id="panel">
+
+  <h1>Zukunftslandschaften — Übersicht</h1>
+  <div class="subtitle">Drei Modelllandschaften · Lausitz · Weserbergland · Heilbronn</div>
+
+  <div class="tab-bar">
+    <div class="tab-btn active" onclick="showTab('geodata')">Geodaten</div>
+    <div class="tab-btn" onclick="showTab('team')">Team-Einträge</div>
+  </div>
+
+  <!-- TAB: Geodaten -->
+  <div id="tab-geodata" class="tab-content active">
+
+    <div class="info-box">
+      <div class="label">Hinweis</div>
+      <p>Schutzgebiete werden über zwei Quellen kombiniert: <strong>BfN</strong> (deutschlandweit, deckt BB/SN/NI/NRW ab) und <strong>LUBW INSPIRE</strong> (deckt Baden-Württemberg ab, weil BfN dort 403 liefert). Beide Layer werden gleichzeitig aktiviert.</p>
+    </div>
+
+    <h2>Schutzgebiete</h2>
+    <div class="feature-item" onclick="toggleFeature('ffh')">
+      <div class="checkbox" id="check-ffh"></div>
+      <div class="feature-rect" style="background: rgba(0,150,136,0.5); border-color: #00897b;"></div>
+      <div class="feature-label">FFH-Gebiete (Natura 2000)</div>
+      <div class="feature-source">BfN + LUBW</div>
+    </div>
+    <div class="feature-item" onclick="toggleFeature('vsg')">
+      <div class="checkbox" id="check-vsg"></div>
+      <div class="feature-rect" style="background: rgba(0,137,123,0.3); border-color: #00695c;"></div>
+      <div class="feature-label">Vogelschutzgebiete (Natura 2000)</div>
+      <div class="feature-source">BfN + LUBW</div>
+    </div>
+    <div class="feature-item" onclick="toggleFeature('nsg')">
+      <div class="checkbox" id="check-nsg"></div>
+      <div class="feature-rect" style="background: rgba(183,28,28,0.3); border-color: #b71c1c;"></div>
+      <div class="feature-label">Naturschutzgebiete (NSG)</div>
+      <div class="feature-source">BfN + LUBW</div>
+    </div>
+    <div class="feature-item" onclick="toggleFeature('lsg')">
+      <div class="checkbox" id="check-lsg"></div>
+      <div class="feature-rect" style="background: rgba(129,199,132,0.3); border-color: #388e3c;"></div>
+      <div class="feature-label">Landschaftsschutzgebiete (LSG)</div>
+      <div class="feature-source">BfN + LUBW</div>
+    </div>
+    <div class="feature-item" onclick="toggleFeature('biosphaere')">
+      <div class="checkbox" id="check-biosphaere"></div>
+      <div class="feature-rect" style="background: rgba(76,175,80,0.3); border-color: #2e7d32;"></div>
+      <div class="feature-label">Biosphärenreservate</div>
+      <div class="feature-source">BfN</div>
+    </div>
+    <div class="feature-item" onclick="toggleFeature('naturpark')">
+      <div class="checkbox" id="check-naturpark"></div>
+      <div class="feature-rect" style="background: rgba(102,187,106,0.3); border-color: #1b5e20;"></div>
+      <div class="feature-label">Naturparke</div>
+      <div class="feature-source">BfN</div>
+    </div>
+
+    <h2>Landnutzung</h2>
+    <div class="feature-item" onclick="toggleFeature('corine')">
+      <div class="checkbox" id="check-corine"></div>
+      <div class="feature-rect" style="background: rgba(156,39,176,0.3); border-color: #7b1fa2;"></div>
+      <div class="feature-label">CORINE Land Cover 2018</div>
+      <div class="feature-source">EEA WMS</div>
+    </div>
+  </div>
+
+  <!-- TAB: Team-Einträge -->
+  <div id="tab-team" class="tab-content">
+    <div class="info-box">
+      <div class="label">Team-Einträge</div>
+      <p>Vom Team gezeichnete Features aus den drei Modelllandschaften, gruppiert nach Region. Die drei Landschaftsrahmen sind standardmäßig sichtbar.</p>
+    </div>
+    <div style="margin:6px 0 4px;">
+      <button id="btn-labels" onclick="toggleLabels()" style="background:#555;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;width:100%;">🏷️ Shape-Labels einblenden</button>
+    </div>
+
+    <!-- LAUSITZ -->
+    <div class="cat-header">
+      <span class="arrow" id="arrow-cat-lausitz" onclick="toggleCat('cat-lausitz')">▼</span>
+      <h2 style="color:#fff; margin:0; flex:1;" onclick="toggleCat('cat-lausitz')">Lausitz (Brandenburg / Sachsen)</h2>
+      <div class="cat-toggle" id="cattgl-lausitz" onclick="toggleCatLayers('lausitz',['team_lz_scope','team_lz_nabu_gruppen'])"></div>
+    </div>
+    <div class="cat-body" id="cat-lausitz" style="max-height:500px;">
+      <div class="feature-item" onclick="toggleFeature('team_lz_scope')">
+        <div class="checkbox checked" id="check-team_lz_scope"></div>
+        <div class="feature-dot" style="background:#1565c0; border-color:#0d47a1;"></div>
+        <div class="feature-label">Landschaftsrahmen</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_lz_nabu_gruppen')">
+        <div class="checkbox" id="check-team_lz_nabu_gruppen"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">NABU-Gruppen (3)</div>
+      </div>
+    </div>
+
+    <!-- WESERBERGLAND -->
+    <div class="cat-header">
+      <span class="arrow" id="arrow-cat-weserbergland" onclick="toggleCat('cat-weserbergland')">▼</span>
+      <h2 style="color:#fff; margin:0; flex:1;" onclick="toggleCat('cat-weserbergland')">Weserbergland (Niedersachsen)</h2>
+      <div class="cat-toggle" id="cattgl-weserbergland" onclick="toggleCatLayers('weserbergland',['team_wb_scope','team_wb_gruenesband','team_wb_fluthamel','team_wb_aerzen_nord','team_wb_aerzen_sued','team_wb_bedrohungen','team_wb_blauesband','team_wb_nabu_weitere','team_wb_badmuender_nabu'])"></div>
+    </div>
+    <div class="cat-body" id="cat-weserbergland" style="max-height:600px;">
+      <div class="feature-item" onclick="toggleFeature('team_wb_scope')">
+        <div class="checkbox checked" id="check-team_wb_scope"></div>
+        <div class="feature-dot" style="background:#1565c0; border-color:#0d47a1;"></div>
+        <div class="feature-label">Landschaftsrahmen Weserbergland</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_wb_gruenesband')">
+        <div class="checkbox" id="check-team_wb_gruenesband"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Grünes Band SHG — Korridore (5)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_wb_fluthamel')">
+        <div class="checkbox" id="check-team_wb_fluthamel"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Fluthamel — Bieber</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_wb_aerzen_nord')">
+        <div class="checkbox" id="check-team_wb_aerzen_nord"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Potenzialflächen Aerzen Nord (76)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_wb_aerzen_sued')">
+        <div class="checkbox" id="check-team_wb_aerzen_sued"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Potenzialflächen Aerzen Süd (63)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_wb_bedrohungen')">
+        <div class="checkbox" id="check-team_wb_bedrohungen"></div>
+        <div class="feature-dot" style="background:#d32f2f; border-color:#b71c1c;"></div>
+        <div class="feature-label">Mühlen / Querbauten / Freizeit (3)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_wb_blauesband')">
+        <div class="checkbox" id="check-team_wb_blauesband"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">Blaues Band der Oberweser (31)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_wb_nabu_weitere')">
+        <div class="checkbox" id="check-team_wb_nabu_weitere"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">ÖSSM + Zuckerstab</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_wb_badmuender_nabu')">
+        <div class="checkbox" id="check-team_wb_badmuender_nabu"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">NABU-Flächen Bad Münder (38)</div>
+      </div>
+    </div>
+
+    <!-- HEILBRONN -->
+    <div class="cat-header">
+      <span class="arrow" id="arrow-cat-heilbronn" onclick="toggleCat('cat-heilbronn')">▼</span>
+      <h2 style="color:#fff; margin:0; flex:1;" onclick="toggleCat('cat-heilbronn')">Heilbronn (Baden-Württemberg)</h2>
+      <div class="cat-toggle" id="cattgl-heilbronn" onclick="toggleCatLayers('heilbronn',['team_hn_scope','team_hn_nachtigalleninsel','team_hn_weinbergsbrachen','team_hn_rebhuhngebiete','team_hn_potenz_rebhuhn','team_hn_rastplatz','team_hn_feuchtgebiete','team_hn_waldheide','team_hn_windkraft','team_hn_ipai','team_hn_nabu_gruppen','team_hn_nabu_nacht_flaechen','team_hn_rebhuhnarbeit','team_hn_green_capital'])"></div>
+    </div>
+    <div class="cat-body" id="cat-heilbronn" style="max-height:700px;">
+      <div class="feature-item" onclick="toggleFeature('team_hn_scope')">
+        <div class="checkbox checked" id="check-team_hn_scope"></div>
+        <div class="feature-dot" style="background:#1565c0; border-color:#0d47a1;"></div>
+        <div class="feature-label">Landschaftsrahmen Gesamt</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_nachtigalleninsel')">
+        <div class="checkbox" id="check-team_hn_nachtigalleninsel"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Nachtigalleninsel</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_weinbergsbrachen')">
+        <div class="checkbox" id="check-team_hn_weinbergsbrachen"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Rebflächen / Weinbergsbrachen (4)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_rebhuhngebiete')">
+        <div class="checkbox" id="check-team_hn_rebhuhngebiete"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Rebhuhngebiete (4)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_potenz_rebhuhn')">
+        <div class="checkbox" id="check-team_hn_potenz_rebhuhn"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Potentielles Rebhuhnhabitat</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_rastplatz')">
+        <div class="checkbox" id="check-team_hn_rastplatz"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Rastplatz Migrierende Vogelart</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_feuchtgebiete')">
+        <div class="checkbox" id="check-team_hn_feuchtgebiete"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Feuchtgebiete (3)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_waldheide')">
+        <div class="checkbox" id="check-team_hn_waldheide"></div>
+        <div class="feature-dot" style="background:#4caf50; border-color:#388e3c;"></div>
+        <div class="feature-label">Waldheide</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_windkraft')">
+        <div class="checkbox" id="check-team_hn_windkraft"></div>
+        <div class="feature-dot" style="background:#d32f2f; border-color:#b71c1c;"></div>
+        <div class="feature-label">Windkraftentwicklung (2)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_ipai')">
+        <div class="checkbox" id="check-team_hn_ipai"></div>
+        <div class="feature-dot" style="background:#d32f2f; border-color:#b71c1c;"></div>
+        <div class="feature-label">KI-Entwicklungszentrum IPAI</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_nabu_gruppen')">
+        <div class="checkbox" id="check-team_hn_nabu_gruppen"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">NABU Büro + Gruppen (15)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_nabu_nacht_flaechen')">
+        <div class="checkbox" id="check-team_hn_nabu_nacht_flaechen"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">Nachtigalleninsel — NABU-Flächen (2)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_rebhuhnarbeit')">
+        <div class="checkbox" id="check-team_hn_rebhuhnarbeit"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">Rebhuhnarbeit mit Landwirten (3)</div>
+      </div>
+      <div class="feature-item" onclick="toggleFeature('team_hn_green_capital')">
+        <div class="checkbox" id="check-team_hn_green_capital"></div>
+        <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
+        <div class="feature-label">Green Capital City Projekt</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Übersichtskarte · Zukunftslandschaften (Lausitz · Weserbergland · Heilbronn) · FOS Europe / NABU<br>
+    Geodaten: BfN, LUBW INSPIRE, EEA/Copernicus (WMS).<br>
+    Hintergrundkarten: OpenStreetMap (DE) / ESRI / OpenTopoMap
+  </div>
+</div>
+
+<script>
+const map = L.map('map', { center: [50.5, 11.5], zoom: 7, zoomControl: false, preferCanvas: true });
+L.control.zoom({ position: 'topleft' }).addTo(map);
+
+// ============ BASE LAYERS ============
+const osmDE = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> (DE)', maxZoom: 19
+});
+const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: '&copy; Esri', maxZoom: 18
+});
+const cartoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+  subdomains: 'abcd', maxZoom: 19, pane: 'overlayPane'
+});
+const satellite = L.layerGroup([esriSat, cartoLabels]);
+const openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenTopoMap', maxZoom: 17
+});
+osmDE.addTo(map);
+L.control.layers({
+  'OpenStreetMap (DE)': osmDE,
+  'Satellit (ESRI)': satellite,
+  'Topographisch': openTopo
+}, null, { position: 'topleft', collapsed: true }).addTo(map);
+
+// ============ WMS LAYERS ============
+const featureLayers = {};
+
+// --- WMS endpoints ---
+const BFN = 'https://geodienste.bfn.de/ogc/wms/schutzgebiet';
+const LUBW_SG = 'https://rips-gdi.lubw.baden-wuerttemberg.de/arcgis/services/GDI/INSPIRE_Schutzgebiete/MapServer/WMSServer';
+const lubwOpts = { format: 'image/png', transparent: true, version: '1.3.0', styles: '' };
+const CORINE_URL = 'https://image.discomap.eea.europa.eu/arcgis/services/Corine/CLC2018_WM/MapServer/WMSServer';
+
+// ============ Schutzgebiete (BfN deutschlandweit + LUBW INSPIRE für BW) ============
+featureLayers.ffh = L.layerGroup([
+  L.tileLayer.wms(BFN, { layers: 'Fauna_Flora_Habitat_Gebiete', format: 'image/png', transparent: true, opacity: 0.9 }),
+  L.tileLayer.wms(LUBW_SG, { ...lubwOpts, layers: 'PS.ProtectedSite.FFH', opacity: 0.7 })
+]);
+featureLayers.vsg = L.layerGroup([
+  L.tileLayer.wms(BFN, { layers: 'Vogelschutzgebiete', format: 'image/png', transparent: true, opacity: 0.85 }),
+  L.tileLayer.wms(LUBW_SG, { ...lubwOpts, layers: 'PS.ProtectedSite.SPA', opacity: 0.7 })
+]);
+featureLayers.nsg = L.layerGroup([
+  L.tileLayer.wms(BFN, { layers: 'Naturschutzgebiete', format: 'image/png', transparent: true, opacity: 0.9 }),
+  L.tileLayer.wms(LUBW_SG, { ...lubwOpts, layers: 'PS.ProtectedSite.NSG', opacity: 0.6 })
+]);
+featureLayers.lsg = L.layerGroup([
+  L.tileLayer.wms(BFN, { layers: 'Landschaftsschutzgebiete', format: 'image/png', transparent: true, opacity: 0.75 }),
+  L.tileLayer.wms(LUBW_SG, { ...lubwOpts, layers: 'PS.ProtectedSite.LSG', opacity: 0.4 })
+]);
+featureLayers.biosphaere = L.tileLayer.wms(BFN, {
+  layers: 'Biosphaerenreservate', format: 'image/png', transparent: true, opacity: 0.7
+});
+featureLayers.naturpark = L.tileLayer.wms(BFN, {
+  layers: 'Naturparke', format: 'image/png', transparent: true, opacity: 0.65
+});
+
+// ============ Landnutzung ============
+featureLayers.corine = L.tileLayer.wms(CORINE_URL, {
+  layers: '12', format: 'image/png', transparent: true, opacity: 0.5
+});
+
+// ============ TEAM-EINTRAEGE: LAUSITZ ============
+
+// Scope: Landschaftsrahmen Lausitz
+featureLayers.team_lz_scope = L.layerGroup();
+L.polygon([[51.693416,13.674545],[51.677239,13.658752],[51.678516,13.648453],[51.676387,13.62236],[51.66489,13.570862],[51.624411,13.514557],[51.623132,13.436279],[51.593282,13.396454],[51.5664,13.41362],[51.532669,13.464432],[51.505751,13.539963],[51.497736,13.572235],[51.488973,13.590603],[51.347341,13.787155],[51.28597,14.168243],[51.247304,14.577484],[51.35849,14.967499],[51.468125,14.957886],[51.525834,14.736099],[51.562559,14.714813],[51.610342,14.763565],[51.68618,14.739532],[51.7098,14.687691],[51.738723,14.658165],[51.754453,14.659882],[51.763803,14.652672],[51.783772,14.654045],[51.798424,14.635162],[51.802671,14.609413],[51.820925,14.587097],[51.835565,14.587784],[51.855715,14.624519],[51.88963,14.667091],[51.900859,14.690781],[51.900118,14.473286],[51.883697,14.420071],[51.865256,14.416122],[51.860486,14.392776],[51.86462,14.26712],[51.872676,14.188156],[51.901071,14.190903],[51.927331,14.16687],[51.91505,14.107132],[51.940032,14.041901],[51.944688,13.973923],[51.927331,13.891525],[51.861228,13.830414],[51.785683,13.694458],[51.715969,13.698578]], {color:'#1565c0',weight:3,fillColor:'#1565c0',fillOpacity:0.05,dashArray:'10,6',interactive:false})
+  .bindPopup('<strong>Landschaftsrahmen Lausitz</strong><br><em style="color:#1565c0;">Scope · Bergbaufolgelandschaft Brandenburg/Sachsen</em>')
+  .addTo(featureLayers.team_lz_scope);
+
+// NABU-Gruppen Lausitz
+featureLayers.team_lz_nabu_gruppen = L.layerGroup();
+[
+  {name:"NABU Finsterwalde", coords:[51.630805, 13.704758]},
+  {name:"NABU Lauta",        coords:[51.454007, 14.096146]},
+  {name:"NABU Weißwasser",   coords:[51.503614, 14.635162]}
+].forEach(function(d) {
+  L.marker(d.coords, {icon:L.divIcon({className:'',html:'<div style="background:#c6a700;color:#fff;padding:3px 6px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.3);">'+d.name+'</div>',iconSize:null}), zIndexOffset:5000})
+    .bindPopup('<strong>'+d.name+'</strong><br><em style="color:#c6a700;">NABU-Gruppe · Lausitz</em>')
+    .addTo(featureLayers.team_lz_nabu_gruppen);
+});
+
+// ============ TEAM-EINTRAEGE: WESERBERGLAND ============
+
+// Scope: Landschaftsrahmen Weserbergland
+featureLayers.team_wb_scope = L.layerGroup();
+L.polygon([[52.236,9.012222],[52.22801,9.042435],[52.221911,9.072647],[52.220859,9.121399],[52.218756,9.170494],[52.213918,9.20723],[52.208238,9.234009],[52.21539,9.264908],[52.226117,9.30851],[52.241677,9.339409],[52.241578,9.339515],[52.282232,9.421978],[52.27404,9.440346],[52.27425,9.442749],[52.273935,9.448929],[52.270573,9.452362],[52.268157,9.459743],[52.265216,9.470043],[52.266161,9.473648],[52.26364,9.473648],[52.262274,9.469528],[52.259752,9.467983],[52.257966,9.465065],[52.255234,9.464207],[52.250926,9.472275],[52.246301,9.477425],[52.245355,9.487038],[52.242728,9.490814],[52.240731,9.489784],[52.238944,9.496994],[52.236421,9.497509],[52.221806,9.506779],[52.222437,9.503174],[52.213287,9.507465],[52.211919,9.516048],[52.207922,9.51313],[52.205503,9.512272],[52.204977,9.508152],[52.208343,9.497337],[52.209711,9.491501],[52.204665,9.486622],[52.18972,9.496307],[52.173721,9.494934],[52.15561,9.50901],[52.085624,9.552956],[52.05819,9.568748],[52.025036,9.594154],[52.006653,9.605141],[51.987206,9.63295],[51.967539,9.653206],[51.969231,9.664536],[51.955268,9.686508],[51.964577,9.694748],[51.967962,9.711914],[51.972615,9.710197],[51.983189,9.713631],[51.979594,9.7229],[51.978959,9.74041],[51.982977,9.744873],[51.981497,9.74865],[51.982554,9.758263],[51.975153,9.773712],[51.96775,9.780922],[51.963308,9.776459],[51.958442,9.788132],[51.959288,9.791908],[51.945323,9.819374],[51.938127,9.823837],[51.928178,9.840317],[51.929871,9.851303],[51.917379,9.864693],[51.914203,9.880829],[51.900859,9.896278],[51.908273,9.883232],[51.904884,9.874992],[51.900647,9.880829],[51.897681,9.871902],[51.898317,9.862976],[51.890901,9.841347],[51.884333,9.803581],[51.864196,9.788818],[51.863984,9.779205],[51.865892,9.763412],[51.877551,9.736977],[51.881578,9.720497],[51.876915,9.706078],[51.871828,9.710884],[51.856139,9.683075],[51.848292,9.687538],[51.841081,9.684105],[51.832383,9.661102],[51.836626,9.655266],[51.832807,9.650116],[51.828564,9.644966],[51.821986,9.646339],[51.817742,9.642563],[51.81477,9.626427],[51.790143,9.579391],[51.776975,9.581451],[51.772726,9.578705],[51.771239,9.573212],[51.76529,9.568748],[51.76189,9.561539],[51.741061,9.559822],[51.740424,9.549179],[51.737447,9.534416],[51.732982,9.52137],[51.711076,9.474678],[51.695118,9.441032],[51.688734,9.438629],[51.681709,9.438629],[51.679155,9.441032],[51.675536,9.436913],[51.672981,9.422493],[51.667658,9.42421],[51.661908,9.431763],[51.655093,9.436569],[51.650833,9.429359],[51.646572,9.413567],[51.646146,9.392967],[51.647211,9.380264],[51.653176,9.375458],[51.666593,9.378548],[51.698098,9.379749],[51.726178,9.370823],[51.742868,9.357433],[51.861228,9.384384],[51.86356,9.372025],[51.862076,9.355202],[51.855079,9.338036],[51.854442,9.321556],[51.856139,9.331512],[51.866952,9.338379],[51.900859,9.342499],[51.915685,9.331856],[51.92225,9.3116],[51.91992,9.295807],[51.989532,9.290142],[52.000418,9.275551],[51.998833,9.211693],[51.997459,9.197102],[51.999996,9.191093],[52.000313,9.1856],[52.002532,9.179077],[52.011831,9.196587],[52.027043,9.18869],[52.033908,9.176674],[52.04056,9.172897],[52.041616,9.176674],[52.04774,9.172039],[52.060196,9.174442],[52.062412,9.179764],[52.068111,9.180965],[52.069799,9.192982],[52.085901,9.176416],[52.087523,9.172425],[52.089263,9.16646],[52.089857,9.16322],[52.090687,9.161675],[52.091043,9.156504],[52.091729,9.154787],[52.097793,9.15556],[52.097912,9.153779],[52.101866,9.153585],[52.102749,9.153864],[52.103777,9.153693],[52.10441,9.1541],[52.104858,9.154594],[52.105517,9.154594],[52.106347,9.154766],[52.107151,9.15601],[52.109233,9.156568],[52.110195,9.156847],[52.111618,9.157684],[52.113424,9.157598],[52.114847,9.158049],[52.115875,9.158885],[52.11909,9.158928],[52.124847,9.155903],[52.129378,9.154873],[52.133277,9.153843],[52.141495,9.147491],[52.146552,9.134617],[52.148975,9.120541],[52.147921,9.060717],[52.148237,9.054365],[52.145393,9.05179],[52.141811,9.044752],[52.138809,9.039001],[52.139652,9.036083],[52.13254,9.017029],[52.135701,9.010248],[52.140337,9.012222],[52.147869,9.017973],[52.1564,9.016771],[52.156769,9.01454],[52.161192,9.01248],[52.169878,9.016342],[52.157874,8.995228],[52.156137,8.980894],[52.156821,8.969479],[52.159823,8.959608],[52.161402,8.948107],[52.241256,8.985786]], {color:'#1565c0',weight:3,fillColor:'#1565c0',fillOpacity:0.05,dashArray:'10,6',interactive:false})
+  .bindPopup('<strong>Landschaftsrahmen Weserbergland</strong><br><em style="color:#1565c0;">Scope · Niedersachsen / NRW</em>')
+  .addTo(featureLayers.team_wb_scope);
+
+// Blaues Band Oberweser (31 Projektgebiete) — gelb
+const wbBlauesBandData = [
+  {name:"Projektgebiet „Auenlandschaft Oberweser“",coords:[[52.18309,9.145603],[52.181774,9.145603],[52.180774,9.146891],[52.178879,9.147577],[52.177195,9.147663],[52.176248,9.148092],[52.175669,9.149981],[52.174984,9.153242],[52.174669,9.155989],[52.1753,9.157791],[52.176669,9.159079],[52.177774,9.15925],[52.179669,9.15822],[52.180879,9.156075],[52.18209,9.151955],[52.183037,9.149895],[52.183721,9.147921]]},
+  {name:"NSG Auenlandschaft Hohenrode",coords:[[52.175721,9.135046],[52.177774,9.134874],[52.179511,9.136505],[52.183142,9.140625],[52.184879,9.143629],[52.185616,9.148264],[52.184826,9.150839],[52.18309,9.1541],[52.1813,9.15659],[52.179353,9.158735],[52.177142,9.159679],[52.175458,9.158993],[52.174458,9.157448],[52.174511,9.154787],[52.175142,9.15041],[52.175142,9.146805],[52.175406,9.142342],[52.175563,9.138908]]},
+  {name:"Auenlandschaft Ahe",coords:[[52.176327,9.119167],[52.175248,9.123845],[52.175458,9.126205],[52.175853,9.128952],[52.1768,9.131355],[52.17809,9.133673],[52.179195,9.13363],[52.180616,9.131999],[52.181011,9.129596],[52.180985,9.126077],[52.180642,9.122],[52.180432,9.119296],[52.179485,9.116979],[52.178037,9.116721]]},
+  {name:"Auenrenaturierung „Lohbuschteich“",coords:[[52.241834,8.883648],[52.241624,8.881073],[52.240731,8.881073],[52.239574,8.882103],[52.238838,8.88382],[52.238208,8.886395],[52.23805,8.88957],[52.238523,8.892746],[52.239627,8.895493],[52.240258,8.897038],[52.241256,8.896179],[52.241361,8.893347],[52.241204,8.890429],[52.241309,8.888025]]},
+  {name:"Weseraue bei Rinteln (West)",coords:[[52.195613,8.995571],[52.196455,8.992653],[52.195823,8.988876],[52.194298,8.985701],[52.192614,8.983555],[52.190615,8.982611],[52.188825,8.98304],[52.187931,8.984756],[52.187563,8.987503],[52.187247,8.990421],[52.187878,8.995657],[52.188615,8.996944],[52.189825,8.998232],[52.191299,8.998833],[52.193456,8.998232]]},
+  {name:"Kalletal (NRW)",coords:[[52.180142,8.958836],[52.182669,8.960981],[52.183774,8.965187],[52.184089,8.970337],[52.184142,8.975401],[52.183826,8.981667],[52.183142,8.986301],[52.181984,8.99231],[52.1813,8.999605],[52.180985,9.003897],[52.179985,9.009047],[52.178932,9.013681],[52.175721,9.014626],[52.174879,9.012651],[52.173511,9.008961],[52.1733,8.999949],[52.1723,8.994455],[52.17251,8.987331],[52.175248,8.972483],[52.176353,8.965273]]},
+  {name:"NSG Eisberger Werder",coords:[[52.199032,9.000549],[52.19898,8.997202],[52.198875,8.995056],[52.19798,8.994112],[52.19677,8.993683],[52.195508,8.994112],[52.19414,8.995314],[52.192456,8.997288],[52.191351,8.999348],[52.191141,9.001923],[52.191877,9.005699],[52.193245,9.006472],[52.194718,9.006901],[52.19656,9.006729],[52.198191,9.005013]]},
+  {name:"NSG „Modde“",coords:[[52.197033,9.028702],[52.195455,9.027328],[52.19314,9.027414],[52.19093,9.029474],[52.189773,9.031878],[52.189562,9.035654],[52.190088,9.038486],[52.191193,9.039946],[52.192561,9.039946],[52.193929,9.039774],[52.195508,9.039345],[52.196823,9.037628],[52.197402,9.03471]]},
+  {name:"Sekundäraue Rinteln",coords:[[52.192719,9.091015],[52.192851,9.088912],[52.192509,9.087067],[52.191641,9.085608],[52.190851,9.084706],[52.190299,9.085393],[52.189799,9.086637],[52.189483,9.088569],[52.18993,9.089427],[52.190062,9.090757],[52.19072,9.09153],[52.191614,9.092045]]},
+  {name:"Auenlandschaft Engern",coords:[[52.187036,9.112387],[52.187142,9.110584],[52.187273,9.108782],[52.187247,9.106679],[52.187089,9.104362],[52.186852,9.10316],[52.185616,9.10213],[52.184616,9.101272],[52.183379,9.100971],[52.182221,9.101229],[52.181221,9.101701],[52.18059,9.103203],[52.179879,9.104662],[52.179379,9.106894],[52.178906,9.109468],[52.178958,9.112301],[52.179274,9.114103],[52.179774,9.11552],[52.180827,9.116464],[52.181432,9.117022],[52.182432,9.117107],[52.183853,9.117107],[52.184642,9.116249],[52.185616,9.115262],[52.1863,9.113717]]},
+  {name:"Auenentwicklung Großenwieden",coords:[[52.159033,9.197874],[52.158454,9.200706],[52.158296,9.203024],[52.158454,9.205942],[52.159296,9.208002],[52.160349,9.210234],[52.161771,9.211435],[52.163824,9.212208],[52.165246,9.211092],[52.166404,9.20929],[52.167141,9.207144],[52.168194,9.202423],[52.169036,9.197788],[52.169405,9.194698],[52.169405,9.191265],[52.169141,9.187832],[52.168615,9.185772],[52.167246,9.184227],[52.16593,9.184055],[52.164561,9.184656],[52.162771,9.186802],[52.161455,9.189892]]},
+  {name:"Weserschleife",coords:[[52.162877,9.260874],[52.162087,9.258299],[52.161244,9.256926],[52.160086,9.255295],[52.159454,9.253664],[52.158506,9.252205],[52.156979,9.251947],[52.155347,9.252462],[52.153609,9.254179],[52.152293,9.257269],[52.151503,9.261732],[52.151503,9.26405],[52.152451,9.266195],[52.153293,9.267654],[52.154399,9.268169],[52.156295,9.26877],[52.157927,9.269114],[52.159823,9.268169],[52.161508,9.266195],[52.162297,9.264307]]},
+  {name:"Kiesteiche Tündern",coords:[[52.080825,9.369793],[52.079981,9.36739],[52.078979,9.366102],[52.077079,9.365072],[52.075339,9.364214],[52.073334,9.363871],[52.070907,9.364471],[52.069905,9.366102],[52.069483,9.367647],[52.069483,9.369879],[52.070327,9.371767],[52.072173,9.373226],[52.074231,9.37417],[52.076816,9.37417],[52.078504,9.373999],[52.080139,9.373226]]},
+  {name:"Wouldham Camp",coords:[[52.085519,9.355459],[52.085572,9.357691],[52.086046,9.359751],[52.08689,9.361639],[52.087787,9.361725],[52.089105,9.361897],[52.090265,9.360352],[52.090898,9.357948],[52.091004,9.354429],[52.090371,9.352798],[52.089,9.351768],[52.087154,9.352112]]},
+  {name:"Weserprallhang Heiligenberg",coords:[[51.997195,9.51107],[51.997195,9.506865],[51.996719,9.503345],[51.995557,9.501801],[51.994024,9.501457],[51.992439,9.503002],[51.991434,9.505749],[51.9908,9.508667],[51.990377,9.512444],[51.990694,9.515276],[51.991434,9.518023],[51.992227,9.519482],[51.993707,9.519567],[51.995927,9.518452],[51.996666,9.515791]]},
+  {name:"Uferteiche Döme",coords:[[51.927225,9.458971],[51.92696,9.45734],[51.926484,9.455967],[51.925108,9.455194],[51.92352,9.454851],[51.922091,9.455366],[51.921297,9.456568],[51.921244,9.457769],[51.92172,9.458971],[51.92262,9.460173],[51.923996,9.461203],[51.925478,9.46043]]},
+  {name:"Weseraue Heidbrink",coords:[[51.904248,9.454508],[51.903878,9.449358],[51.90356,9.44541],[51.902501,9.443007],[51.901177,9.442148],[51.899588,9.441462],[51.898317,9.441891],[51.897258,9.443436],[51.896675,9.449272],[51.895986,9.45322],[51.895933,9.456568],[51.896675,9.459143],[51.897575,9.460945],[51.898952,9.461374],[51.900276,9.461117],[51.901812,9.459314],[51.903083,9.45734]]},
+  {name:"Flutrinne Kapenberg",coords:[[51.890531,9.427557],[51.890531,9.424725],[51.890319,9.422235],[51.889524,9.420948],[51.888412,9.420776],[51.88714,9.421806],[51.885922,9.424725],[51.885922,9.427729],[51.885869,9.430733],[51.886399,9.432878],[51.887193,9.433308],[51.887988,9.432793],[51.888994,9.431248]]},
+  {name:"Ehem. Kiesabgrabung Heinsen",coords:[[51.882743,9.464808],[51.883008,9.460859],[51.88322,9.457169],[51.882478,9.45365],[51.880571,9.45219],[51.879034,9.45219],[51.876597,9.45219],[51.874954,9.453821],[51.873418,9.456396],[51.872093,9.460602],[51.872146,9.463434],[51.872835,9.464893],[51.873471,9.465666],[51.875431,9.46661],[51.878028,9.466782],[51.880783,9.466181]]},
+  {name:"Ehem. Klärteiche Papierfabrik",coords:[[51.844978,9.443521],[51.844899,9.441419],[51.844448,9.43923],[51.843838,9.438415],[51.842884,9.437857],[51.842088,9.438415],[51.841293,9.439702],[51.841293,9.441204],[51.841744,9.443607],[51.842486,9.445195],[51.843494,9.445968],[51.844766,9.445839]]},
+  {name:"Dammbruchgraben",coords:[[51.845164,9.456182],[51.844793,9.454722],[51.844236,9.454079],[51.843335,9.453435],[51.842354,9.453478],[51.840948,9.45365],[51.840232,9.454722],[51.839649,9.456182],[51.840444,9.457211],[51.841134,9.458113],[51.842115,9.458628],[51.843255,9.458113],[51.844024,9.457769]]},
+  {name:"Mönchewerder",coords:[[51.851845,9.455667],[51.851871,9.453478],[51.851739,9.451118],[51.851314,9.449315],[51.850387,9.448285],[51.849432,9.447641],[51.848663,9.448328],[51.848107,9.449916],[51.84755,9.454808],[51.847603,9.457598],[51.848027,9.460087],[51.849088,9.461718],[51.85036,9.461718],[51.851792,9.460044]]},
+  {name:"Hellegrabenmündung",coords:[[51.855609,9.462533],[51.855476,9.459529],[51.855052,9.45837],[51.854442,9.457769],[51.853488,9.457726],[51.852825,9.457941],[51.85211,9.459229],[51.851686,9.460559],[51.851845,9.461803],[51.852216,9.463091],[51.852931,9.463778],[51.853409,9.463949],[51.85431,9.463863],[51.855132,9.463391]]},
+  {name:"Weserschleife Höxter",coords:[[51.816893,9.42524],[51.817264,9.420691],[51.817476,9.417601],[51.817476,9.413652],[51.81684,9.409618],[51.815778,9.406614],[51.813603,9.403782],[51.811374,9.402323],[51.808774,9.401894],[51.806863,9.402409],[51.804688,9.403353],[51.802618,9.405584],[51.801397,9.410219],[51.800972,9.413996],[51.801025,9.416742],[51.800919,9.419146],[51.801185,9.421892],[51.801715,9.42524],[51.80283,9.429102],[51.805059,9.430819],[51.806917,9.432364],[51.809782,9.432364],[51.811852,9.432449],[51.813974,9.430561],[51.815619,9.428587]]},
+  {name:"Hechtgräben",coords:[[51.816627,9.436398],[51.81477,9.43511],[51.81286,9.433908],[51.810684,9.433565],[51.808615,9.433308],[51.80628,9.433994],[51.803785,9.434853],[51.802458,9.436655],[51.801715,9.437857],[51.803414,9.440775],[51.805643,9.441805],[51.809358,9.441547],[51.812913,9.440432],[51.814823,9.440088],[51.81615,9.439058]]},
+  {name:"Flutmulde Boffzen",coords:[[51.760669,9.383097],[51.760137,9.381294],[51.758915,9.379578],[51.756897,9.378376],[51.75525,9.377432],[51.753231,9.377089],[51.750893,9.377346],[51.749086,9.377775],[51.747651,9.379578],[51.747439,9.380522],[51.747332,9.381809],[51.747651,9.382753],[51.748289,9.384127],[51.749245,9.384899],[51.750361,9.385586],[51.751477,9.385843],[51.752859,9.386101],[51.754718,9.386101],[51.756737,9.386015],[51.758703,9.385586],[51.76019,9.384727]]},
+  {name:"Weseraue Lauenförde",coords:[[51.701023,9.403181],[51.700917,9.400177],[51.700279,9.398117],[51.69964,9.3958],[51.698204,9.39374],[51.697353,9.392109],[51.695757,9.391165],[51.694214,9.390049],[51.692405,9.388847],[51.690702,9.388332],[51.688787,9.388332],[51.687031,9.389277],[51.685222,9.391508],[51.683412,9.393997],[51.68288,9.396143],[51.682242,9.398375],[51.682242,9.402237],[51.683625,9.40464],[51.685488,9.407387],[51.686818,9.408245],[51.689053,9.409533],[51.690702,9.410048],[51.692671,9.410133],[51.694533,9.409533],[51.696661,9.409447],[51.698204,9.408503],[51.699853,9.406786]]},
+  {name:"Weserschleife Beverungen",coords:[[51.68288,9.393139],[51.683679,9.391079],[51.684424,9.389448],[51.684743,9.387474],[51.684157,9.385242],[51.682827,9.383783],[51.680805,9.382925],[51.678836,9.382668],[51.677452,9.383955],[51.6766,9.386015],[51.676068,9.388933],[51.676494,9.39168],[51.677239,9.393225],[51.678463,9.394598],[51.679847,9.39477],[51.681018,9.394169]]},
+  {name:"Weseraue bei Beverungen (Süd)",coords:[[51.67676,9.391594],[51.676654,9.388676],[51.676707,9.385071],[51.675908,9.382753],[51.674578,9.382238],[51.672821,9.382324],[51.67165,9.382925],[51.671171,9.385157],[51.671118,9.387045],[51.671331,9.391079],[51.672076,9.394255],[51.672715,9.396143],[51.674844,9.397345],[51.675962,9.395456]]},
+  {name:"Auenlandschaft Lauenförde",coords:[[51.654827,9.386744],[51.654827,9.385629],[51.654827,9.384127],[51.6548,9.382238],[51.654587,9.380908],[51.654401,9.379106],[51.654161,9.37799],[51.653948,9.377089],[51.653549,9.376445],[51.652963,9.376016],[51.652164,9.376059],[51.651312,9.377346],[51.650859,9.378805],[51.649954,9.38168],[51.649714,9.383826],[51.649288,9.386015],[51.649288,9.387517],[51.649155,9.389105],[51.649501,9.389963],[51.650194,9.390521],[51.651126,9.390864],[51.652324,9.390564],[51.653256,9.389706],[51.653948,9.388418]]},
+  {name:"NSG „Ochsenhof“",coords:[[51.546415,9.618487],[51.546415,9.616599],[51.545988,9.615054],[51.545294,9.614239],[51.544093,9.614024],[51.543212,9.613767],[51.542171,9.613767],[51.541024,9.61411],[51.54009,9.615097],[51.539235,9.616556],[51.539049,9.618316],[51.539476,9.620118],[51.539716,9.620891],[51.540116,9.62162],[51.540997,9.621835],[51.542171,9.622478],[51.543079,9.622436],[51.543986,9.622135],[51.545134,9.621105],[51.545828,9.620032]]},
+  {name:"Auskiesungsgebiet „Ballertasche“",coords:[[51.464596,9.641275],[51.464489,9.638186],[51.464221,9.635525],[51.463794,9.63398],[51.463205,9.632006],[51.462189,9.630632],[51.460959,9.629774],[51.459676,9.629259],[51.457858,9.629087],[51.456039,9.629345],[51.454756,9.630632],[51.453579,9.632006],[51.452563,9.636126],[51.452456,9.640074],[51.452723,9.64222],[51.454595,9.644451],[51.456521,9.645309],[51.459302,9.645739],[51.461334,9.645224],[51.462885,9.644108]]}
+];
+featureLayers.team_wb_blauesband = L.layerGroup();
+wbBlauesBandData.forEach(function(d) {
+  L.polygon(d.coords, {color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.15})
+  .bindPopup('<strong>'+d.name+'</strong><br><em style="color:#c6a700;">Blaues Band der Oberweser</em>')
+  .addTo(featureLayers.team_wb_blauesband);
+});
+
+// Grünes Band SHG (5 Korridore) — grün
+const wbGruenesBandData = [
+  {name:"Korridor 1a",coords:[[52.434246,9.260101],[52.43545,9.26156],[52.436915,9.262075],[52.438171,9.26199],[52.43974,9.261303],[52.440839,9.25993],[52.440944,9.256496],[52.439845,9.251604],[52.439217,9.245682],[52.438485,9.241219],[52.437281,9.23564],[52.43681,9.231091],[52.436078,9.227571],[52.43524,9.223709],[52.433618,9.221306],[52.432258,9.218473],[52.430321,9.217358],[52.428804,9.21813],[52.427809,9.220877],[52.43006,9.223795],[52.431891,9.226885],[52.432519,9.231091],[52.433775,9.235811],[52.434141,9.241219],[52.434194,9.245253],[52.434089,9.249287],[52.433827,9.253836]]},
+  {name:"Korridor 1b",coords:[[52.428385,9.218645],[52.427809,9.212809],[52.426448,9.211264],[52.424512,9.208775],[52.423203,9.207315],[52.421633,9.205256],[52.419958,9.203281],[52.41844,9.201307],[52.417027,9.198132],[52.416294,9.194698],[52.414828,9.195299],[52.413362,9.196587],[52.412839,9.199591],[52.414514,9.20517],[52.416189,9.209375],[52.41755,9.21195],[52.418911,9.214783],[52.420482,9.216413],[52.421842,9.218044],[52.423203,9.219246],[52.424564,9.219933],[52.425716,9.22122]]},
+  {name:"Korridor 2c",coords:[[52.378953,9.315891],[52.383982,9.314861],[52.386601,9.316063],[52.387544,9.321041],[52.386811,9.327736],[52.382096,9.333744],[52.37539,9.336491],[52.369206,9.336834],[52.362812,9.335632],[52.355579,9.334431],[52.349707,9.333401],[52.344149,9.332199],[52.339639,9.330482],[52.337856,9.327049],[52.337856,9.323959],[52.338591,9.321041],[52.342891,9.322071],[52.345932,9.321556],[52.350441,9.321041],[52.355159,9.321556],[52.35799,9.321213],[52.363127,9.320698],[52.37235,9.319153]]},
+  {name:"Korridor 3a",coords:[[52.421319,9.244909],[52.421319,9.243107],[52.421214,9.240961],[52.420743,9.239588],[52.42001,9.238815],[52.41933,9.238901],[52.418283,9.241304],[52.417393,9.243622],[52.415299,9.250832],[52.413938,9.254436],[52.413362,9.258127],[52.412001,9.26302],[52.411006,9.267054],[52.409697,9.269886],[52.41064,9.271431],[52.41153,9.271345],[52.412315,9.267654],[52.413886,9.262934],[52.415351,9.259243],[52.416713,9.255981],[52.417236,9.25375],[52.418754,9.249973],[52.42001,9.247313]]},
+  {name:"Korridor 3b",coords:[[52.41755,9.29143],[52.418231,9.290228],[52.418126,9.288683],[52.416713,9.287996],[52.415509,9.287996],[52.41399,9.28894],[52.413048,9.290571],[52.413729,9.291687],[52.414619,9.292116],[52.415456,9.292717],[52.416294,9.292545]]}
+];
+featureLayers.team_wb_gruenesband = L.layerGroup();
+wbGruenesBandData.forEach(function(d) {
+  L.polygon(d.coords, {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.15})
+  .bindPopup('<strong>Grünes Band SHG — '+d.name+'</strong><br><em style="color:#4caf50;">Biotopverbundkorridor</em>')
+  .addTo(featureLayers.team_wb_gruenesband);
+});
+
+// Schutzobjekte: Fluthamel — Bieber (Polyline)
+featureLayers.team_wb_fluthamel = L.layerGroup();
+L.polyline([[52.090055,9.361854],[52.090397,9.364042],[52.091056,9.366231],[52.092006,9.369278],[52.092428,9.371123],[52.093403,9.373527],[52.09393,9.374771],[52.094273,9.376016],[52.095644,9.379535],[52.09691,9.382625],[52.097912,9.384212],[52.098887,9.386444],[52.100416,9.390178],[52.101576,9.39198],[52.102525,9.393182],[52.103658,9.394555],[52.104555,9.395156],[52.104792,9.397044],[52.10466,9.39786]], {color:'#4caf50',weight:3})
+  .bindPopup('<strong>Fluthamel — Bieber</strong><br><em style="color:#4caf50;">Schutzobjekt (Gewässerlauf)</em>')
+  .addTo(featureLayers.team_wb_fluthamel);
+
+// NABU-Flächen Bad Münder (38 Polygone) — gelb
+const wbBadMuenderData = [
+  {name:"Halbtrockenrasen, Grundstück Nr.1",type:"polygon",coords:[[52.205503,9.437063],[52.206686,9.437256],[52.206134,9.440839],[52.205016,9.440668]]},
+  {name:"Trockenrasen, Nordhang, Grundstück Nr.2",type:"polygon",coords:[[52.206713,9.437213],[52.207028,9.437256],[52.207186,9.436462],[52.207528,9.436505],[52.206686,9.440968],[52.206108,9.440775]]},
+  {name:"Feuchtwiese, Grundstück Nr.3",type:"polygon",coords:[[52.202238,9.425519],[52.202301,9.425980],[52.203083,9.425653],[52.202938,9.424730]]},
+  {name:"Feucht- und Streuwiese, Grundstück Nr.4",type:"polygon",coords:[[52.200676,9.427525],[52.200722,9.427954],[52.199637,9.430647],[52.199407,9.430293]]},
+  {name:"Feucht- und Streuwiese, Grundstück Nr.4",type:"polygon",coords:[[52.200473,9.427053],[52.200637,9.427353],[52.199414,9.430196],[52.198993,9.428598],[52.199874,9.427493]]},
+  {name:"Bachlauf, Röhricht, Seggenried, Weidenbruch,  Landschaftsteiche , Grundstück Nr. 5",type:"polygon",coords:[[52.217770,9.426334],[52.218191,9.423866],[52.221280,9.425197],[52.220780,9.427793]]},
+  {name:"Magerrasen, Feuchtwiese , Grundstück Nr. 6",type:"polygon",coords:[[52.205753,9.421211],[52.205920,9.421157],[52.206022,9.421463],[52.205953,9.421763],[52.205812,9.421790]]},
+  {name:"Feuchtwiese, Sumpfdotterblumen, Grundstück Nr.7",type:"polygon",coords:[[52.202629,9.426500],[52.202564,9.425948],[52.203678,9.425422],[52.203727,9.426152]]},
+  {name:"Von Hecke eingerahmte Staudenwiese , Grundstück Nr. 9",type:"polygon",coords:[[52.204950,9.484001],[52.205089,9.483690],[52.206962,9.485933],[52.206818,9.486244]]},
+  {name:"Streu- und Feuchtwiese , Grundstück Nr. 10",type:"polygon",coords:[[52.180202,9.472007],[52.180866,9.473766],[52.180399,9.474013],[52.179886,9.472672]]},
+  {name:"Bach, Streu- und Feuchtwiese , Grundstück Nr. 11 ",type:"polygon",coords:[[52.179892,9.472768],[52.179774,9.473734],[52.180136,9.474496],[52.180537,9.474066],[52.180412,9.474013]]},
+  {name:"Bach, Feuchtwiese , Grundstück Nr. 12 ",type:"polygon",coords:[[52.211637,9.419628],[52.211446,9.420658],[52.211229,9.420573],[52.211039,9.420615],[52.211006,9.420304],[52.210631,9.420283],[52.210624,9.419457],[52.211150,9.419467]]},
+  {name:"Bach, Feuchtwiese , Grundstück Nr. 13 ",type:"polygon",coords:[[52.205128,9.423898],[52.205522,9.425529],[52.205181,9.425669],[52.204924,9.424510]]},
+  {name:"Bach, Streu- und Feuchtwiese Weiden und Erlen am Bachlauf , Grundstück Nr. 15 ",type:"polygon",coords:[[52.188063,9.435652],[52.188454,9.436494],[52.188829,9.437052],[52.188372,9.437723],[52.187918,9.436532],[52.187832,9.435872]]},
+  {name:"Feuchtwiese , Grundstück Nr. 16 ",type:"polygon",coords:[[52.173958,9.458692],[52.173287,9.460645],[52.173484,9.461203],[52.173708,9.461331],[52.174879,9.459636],[52.174537,9.459293],[52.173800,9.460516]]},
+  {name:"Erlen-, Pappelwald , Grundstück Nr. 17",type:"polygon",coords:[[52.211656,9.419671],[52.211472,9.420615],[52.212261,9.421012],[52.212478,9.421442],[52.212715,9.420283]]},
+  {name:"Erlenbruchwald , Grundstück Nr. 18 ",type:"polygon",coords:[[52.190657,9.441569],[52.190404,9.441569],[52.190427,9.442148],[52.190483,9.442207],[52.190661,9.442191]]},
+  {name:"Streuobstwiese ,  Grundstück Nr. 19 ",type:"polygon",coords:[[52.203040,9.432524],[52.203501,9.432777],[52.203162,9.434257],[52.203057,9.434225],[52.203109,9.433066],[52.203021,9.432980]]},
+  {name:"Wiese , Grundstück Nr. 20 ",type:"polygon",coords:[[52.205864,9.422461],[52.205391,9.422997],[52.205108,9.423941],[52.206272,9.423212]]},
+  {name:"Wiese, Grundstück Nr. 21 ",type:"polygon",coords:[[52.204687,9.425100],[52.204747,9.425840],[52.204257,9.425985],[52.204201,9.425250]]},
+  {name:"Großseggenried , Grundstück Nr. 22",type:"polygon",coords:[[52.205726,9.446912],[52.204516,9.449315],[52.204227,9.448757]]},
+  {name:"Großseggenried, Grünland mit Feuchtbereich , Grundstück Nr. 24 ",type:"polygon",coords:[[52.207968,9.422225],[52.207567,9.423716],[52.207219,9.423416],[52.207140,9.423925],[52.207791,9.424210],[52.208133,9.422300]]},
+  {name:"Großseggenried, Grünland mit Feuchtbereich , Grundstück Nr. 24",type:"polygon",coords:[[52.207725,9.422085],[52.207949,9.422203],[52.207567,9.423748],[52.207248,9.423389],[52.207350,9.422804]]},
+  {name:"Feuchtwiese mit Sumpfdotterblumen , Grundstück Nr. 25 ",type:"polygon",coords:[[52.207732,9.422042],[52.207853,9.421822],[52.208172,9.422112],[52.208133,9.422278]]},
+  {name:"Grünland am Bach,  Grundstück Nr. 26",type:"polygon",coords:[[52.208379,9.416501],[52.208432,9.416335],[52.208452,9.416501],[52.208754,9.416968],[52.208632,9.417365]]},
+  {name:"Weide , Grundstück Nr. 27",type:"polygon",coords:[[52.204194,9.425256],[52.204257,9.426007],[52.203754,9.426109],[52.203698,9.425406]]},
+  {name:"Feldgehölz mit 2 Teichen und 1 Absenkbecken , Grundstück Nr. 28 ",type:"polygon",coords:[[52.190667,9.433243],[52.190799,9.433157],[52.190753,9.436741],[52.190384,9.436580]]},
+  {name:"Rückführung in extensives Grünland , Grundstück Nr. 29 ",type:"polygon",coords:[[52.178596,9.474206],[52.179027,9.475263],[52.178988,9.475392],[52.179093,9.475654],[52.179070,9.475821],[52.179004,9.475923],[52.178425,9.474522]]},
+  {name:"Grünland mit Feuchtinseln , Grundstück Nr. 30 ",type:"polygon",coords:[[52.160915,9.491565],[52.160218,9.491823],[52.160060,9.492466],[52.160191,9.494076],[52.160560,9.494076],[52.160744,9.492574],[52.160784,9.492037],[52.161047,9.491887]]},
+  {name:"Grünland mit Feuchtinseln, Quellbereich , Grundstück Nr. 31 ",type:"polygon",coords:[[52.205148,9.423920],[52.206463,9.425261],[52.205555,9.425561]]},
+  {name:"Grünland mit Feuchtinseln, Quellbereich , Grundstück Nr. 31",type:"polygon",coords:[[52.205194,9.423909],[52.206272,9.423190],[52.206739,9.423898],[52.206469,9.425218]]},
+  {name:"Grünland mit Graben , Grundstück Nr. 32 ",type:"polygon",coords:[[52.204247,9.424274],[52.204332,9.425186],[52.203326,9.425529],[52.203155,9.424542],[52.203925,9.424220]]},
+  {name:"Grünland mit Graben , Grundstück Nr. 32 ",type:"polygon",coords:[[52.202965,9.424735],[52.203142,9.424542],[52.203333,9.425508],[52.203090,9.425626]]},
+  {name:"Mit Bäumen bestandene Gehölzfläche , Grundstück Nr. 33 ",type:"polygon",coords:[[52.204490,9.436913],[52.205463,9.437041],[52.205207,9.438951],[52.204188,9.438704]]},
+  {name:"Streuobstwiese, Grundstück Nr. 34",type:"polygon",coords:[[52.189917,9.442631],[52.190621,9.442545],[52.190621,9.443736],[52.189635,9.444079]]},
+  {name:"Brachland, Grundstück Nr. 35 ",type:"polygon",coords:[[52.192456,9.441569],[52.192568,9.441569],[52.192430,9.445260],[52.192325,9.445174]]},
+  {name:"Streuobstwiese, Grundstück Nr. 36",type:"polygon",coords:[[52.232662,9.434595],[52.232741,9.433973],[52.234265,9.435046],[52.234200,9.435647]]},
+  {name:"Magerwiese mit Streuobstbestand, Grundstück Nr. 37",type:"polygon",coords:[[52.212314,9.438275],[52.211998,9.439766],[52.213990,9.439938],[52.213832,9.438565]]}
+];
+featureLayers.team_wb_badmuender_nabu = L.layerGroup();
+wbBadMuenderData.forEach(function(d) {
+  var fn = (d.type === 'polyline') ? L.polyline : L.polygon;
+  fn(d.coords, {color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.2})
+    .bindPopup('<strong>'+d.name.trim()+'</strong><br><em style="color:#c6a700;">NABU-Fläche Bad Münder</em>')
+    .addTo(featureLayers.team_wb_badmuender_nabu);
+});
+
+// Ökologische Potenzialflächen Aerzen Nord (76 Polylinien) — grün
+const wbAerzenNordData = [
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.084202,9.270655],[52.085494,9.272285],[52.083939,9.274044]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.083754,9.273658],[52.084018,9.270569]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.087339,9.272843],[52.087709,9.271684]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.081091,9.260872],[52.080221,9.263232]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.081671,9.266150],[52.082489,9.266579]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.077611,9.263704],[52.072179,9.267394]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.074183,9.264219],[52.072311,9.266407]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.075053,9.266664],[52.074447,9.269024],[52.071836,9.268381]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.074051,9.277991],[52.074579,9.280051]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.073682,9.277605],[52.071361,9.277648]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.069489,9.298500],[52.069858,9.301589]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.075871,9.309269],[52.072548,9.311372]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.075844,9.309999],[52.072944,9.312058]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.069278,9.314761],[52.070966,9.321240]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.070597,9.317078],[52.071652,9.320768]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.072047,9.322098],[52.072627,9.324372]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.067168,9.316606],[52.066825,9.317035]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.067722,9.318108],[52.068039,9.319867]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.068329,9.320854],[52.068540,9.322399]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.067274,9.318923],[52.067511,9.319738]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.066426,9.317064],[52.066215,9.316957]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.065397,9.317987],[52.065556,9.317901]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.064422,9.320754],[52.064606,9.320690]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.063287,9.305909],[52.062114,9.306081]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.064281,9.304356],[52.063734,9.303755]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.064854,9.303654],[52.064791,9.303649]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.064633,9.301386],[52.063321,9.301986]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.081330,9.259718],[52.079300,9.255170],[52.077191,9.253926]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.073684,9.253539],[52.073130,9.260490]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.069623,9.259846],[52.068832,9.261691]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.068779,9.261776],[52.066907,9.263149]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.066247,9.264179],[52.065219,9.268169]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.066511,9.268813],[52.065773,9.268341]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.065034,9.270100],[52.064718,9.271216]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.064032,9.274562],[52.063267,9.276836]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.059944,9.275892],[52.058704,9.270615]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.060160,9.299004],[52.060424,9.301213]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.060411,9.301857],[52.060978,9.307606]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.054330,9.269203],[52.054593,9.269589]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.052114,9.271284],[52.052905,9.273472]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.049284,9.275598],[52.050709,9.280833]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.050465,9.268495],[52.049277,9.269653]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.048816,9.269996],[52.048130,9.270575]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.049911,9.267787],[52.049963,9.268602]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.049343,9.267036],[52.049541,9.268730]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.049017,9.263558],[52.049004,9.264223]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.048832,9.260802],[52.051226,9.262754]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.051862,9.262466],[52.052997,9.262873]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.053946,9.253692],[52.054381,9.255838]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.053233,9.254057],[52.053589,9.256116]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.056109,9.264206],[52.055199,9.266395]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.060292,9.264571],[52.058537,9.263069]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.062917,9.264549],[52.062231,9.264592]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.062812,9.265129],[52.062363,9.265129]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.054880,9.225708],[52.054511,9.230772]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.064398,9.247840],[52.061945,9.247926]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.064952,9.247754],[52.066034,9.248570]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.064820,9.247668],[52.063976,9.249857]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.065902,9.248698],[52.065156,9.250917]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.065130,9.250832],[52.064022,9.249845]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.065895,9.237528],[52.070116,9.242935]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.066897,9.233923],[52.071276,9.238815]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.072121,9.232206],[52.069483,9.226885]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.072305,9.225941],[52.072727,9.226627]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.073017,9.227228],[52.073017,9.228258]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.071672,9.221478],[52.071382,9.223194]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.072384,9.215040],[52.072569,9.216413]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.076921,9.218473],[52.075972,9.219933]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.067557,9.215899],[52.065921,9.216371]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.061462,9.197273],[52.060750,9.198732]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.060618,9.196029],[52.060539,9.197316]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.068586,9.185300],[52.069588,9.190192]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Nord",coords:[[52.066845,9.183369],[52.067478,9.183326]]},
+  {name:"Ökolog. Potenzialflächen Aerzen Nord",coords:[[52.080244,9.188819],[52.079084,9.191394]]},
+  {name:"Ökolog. Potenzialflächen Aerzen Nord",coords:[[52.083066,9.209032],[52.082750,9.212594]]},
+  {name:"Ökolog. Potenzialflächen Aerzen Nord",coords:[[52.083462,9.221992],[52.083093,9.228687]]}
+];
+featureLayers.team_wb_aerzen_nord = L.layerGroup();
+wbAerzenNordData.forEach(function(d) {
+  L.polyline(d.coords, {color:'#4caf50',weight:3,opacity:0.8})
+    .bindPopup('<strong>'+d.name.trim()+'</strong><br><em style="color:#4caf50;">Ökologische Potenzialfläche — Aerzen Nord</em>')
+    .addTo(featureLayers.team_wb_aerzen_nord);
+});
+
+// Ökologische Potenzialflächen Aerzen Süd (62 Polylinien + 1 Polygon) — grün
+const wbAerzenSuedData = [
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.035993,9.248257],[52.035149,9.248943]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.026977,9.230318],[52.026185,9.230554]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.027056,9.230747],[52.026396,9.230897]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.028508,9.227378],[52.029235,9.227829]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.028429,9.227893],[52.029116,9.228258]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.031994,9.227979],[52.031268,9.228473]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.024746,9.224567],[52.024085,9.223924]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.024746,9.224181],[52.024495,9.223022]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.023267,9.222078],[52.022739,9.221585],[52.021762,9.220748]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.021550,9.220576],[52.020085,9.219911]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.015832,9.213431],[52.017034,9.215791]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.014802,9.207873],[52.015476,9.209847]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.015938,9.200170],[52.015304,9.200449]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.016004,9.201329],[52.015383,9.201608]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.016229,9.202681],[52.015555,9.202981]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.008529,9.203517],[52.007723,9.206350]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.009137,9.206007],[52.007921,9.206350]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.007644,9.205556],[52.007261,9.206629]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polygon",coords:[[52.036073,9.210749],[52.034093,9.211693],[52.034515,9.213281],[52.036442,9.212122]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.042382,9.215984],[52.044731,9.224868]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.044203,9.247828],[52.040930,9.243021]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.045312,9.241648],[52.042303,9.244652]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.047476,9.246197],[52.041352,9.237270],[52.039557,9.234180],[52.036759,9.236670]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.039399,9.233923],[52.037657,9.228945]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.040745,9.248643],[52.039003,9.247570]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.040006,9.249887],[52.038818,9.248385]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.045127,9.251518],[52.044757,9.252119],[52.043095,9.250617]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.044731,9.251947],[52.043913,9.253793],[52.042144,9.251647]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.047265,9.257140],[52.044810,9.254351]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.047978,9.255638],[52.045153,9.252720]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.043147,9.250574],[52.041986,9.249287]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.042197,9.251604],[52.041009,9.250317]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.039874,9.250917],[52.042276,9.254007]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.042408,9.254522],[52.041722,9.255424]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.044045,9.254093],[52.044969,9.255080]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.043517,9.254909],[52.044071,9.255681]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.046631,9.258814],[52.047080,9.259243]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.037287,9.254951],[52.037762,9.257569]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.036601,9.255638],[52.036891,9.257827]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.038211,9.263706],[52.040033,9.262247],[52.040745,9.265380]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.041247,9.266109],[52.042382,9.267569],[52.045285,9.265809],[52.046552,9.264994]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.039346,9.266710],[52.039161,9.266067]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.048294,9.263513],[52.048083,9.263835]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.048453,9.268405],[52.048123,9.268727]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.046275,9.270036],[52.045892,9.270229]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.043385,9.271774],[52.043754,9.272783]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.044414,9.274199],[52.046697,9.279091]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.039689,9.271302],[52.040191,9.273491]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.038449,9.272375],[52.038924,9.274178]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.037076,9.270616],[52.037525,9.272633]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.036997,9.268298],[52.037155,9.268985]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.035782,9.269843],[52.035861,9.270315]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.031479,9.276752],[52.031901,9.278855]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.022131,9.261732],[52.022607,9.264736]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.031796,9.286966],[52.031848,9.287782]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.021682,9.287310],[52.018724,9.289370],[52.016796,9.290013]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.013785,9.290528],[52.011672,9.295721],[52.011461,9.298854],[52.012465,9.301085],[52.014287,9.303575]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.012676,9.312887],[52.010220,9.313531],[52.009137,9.307952],[52.011567,9.307008]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.011567,9.305463],[52.011250,9.303617]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.011091,9.301944],[52.011672,9.302244]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.043358,9.197359],[52.042672,9.197531]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.042091,9.198647],[52.041564,9.198604]]},
+  {name:"Ökolog. Potenzialfläche Aerzen Süd",type:"polyline",coords:[[52.005385,9.210663],[52.004170,9.211822]]}
+];
+featureLayers.team_wb_aerzen_sued = L.layerGroup();
+wbAerzenSuedData.forEach(function(d) {
+  var fn = (d.type === 'polygon') ? L.polygon : L.polyline;
+  fn(d.coords, {color:'#4caf50',weight:3,opacity:0.8,fillColor:'#4caf50',fillOpacity:0.2})
+    .bindPopup('<strong>'+d.name.trim()+'</strong><br><em style="color:#4caf50;">Ökologische Potenzialfläche — Aerzen Süd</em>')
+    .addTo(featureLayers.team_wb_aerzen_sued);
+});
+
+// Bedrohungen Weserbergland (3) — rot
+featureLayers.team_wb_bedrohungen = L.layerGroup();
+L.polygon([[51.938762,9.194698],[51.940032,9.206371],[51.937863,9.213495],[51.935799,9.217014],[51.936169,9.223366],[51.937704,9.229546],[51.942995,9.235811],[51.951142,9.24036],[51.956009,9.242163],[51.954211,9.242764],[51.951195,9.242935],[51.946646,9.240618],[51.93945,9.23624],[51.936593,9.233065],[51.93474,9.226971],[51.932729,9.218302],[51.93347,9.213924],[51.934899,9.213581],[51.935111,9.209204],[51.933576,9.207659],[51.930083,9.20826],[51.929236,9.203196],[51.929924,9.197016],[51.931248,9.193583],[51.932571,9.192038]], {color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.15})
+  .bindPopup('<strong>Mühlen / Querbauten — Zerschneidung</strong><br><em style="color:#d32f2f;">Bedrohung · Weserbergland</em>')
+  .addTo(featureLayers.team_wb_bedrohungen);
+L.polygon([[52.023848,9.343657],[52.019992,9.341598],[52.019094,9.344044],[52.016453,9.341726],[52.014763,9.343228],[52.013918,9.345074],[52.012148,9.345417],[52.011038,9.344001],[52.010484,9.347177],[52.010431,9.349966],[52.017061,9.349837],[52.018408,9.347005],[52.020811,9.347692],[52.022501,9.348679]], {color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.15})
+  .bindPopup('<strong>Widerstand gegen geplante Auenentwicklung</strong><br><em style="color:#d32f2f;">Bedrohung · Weserbergland</em>')
+  .addTo(featureLayers.team_wb_bedrohungen);
+L.polygon([[52.183142,9.043207],[52.188825,9.039731],[52.192114,9.045825],[52.195718,9.049602],[52.196928,9.052091],[52.196086,9.059601],[52.195113,9.060159],[52.193351,9.056511],[52.186168,9.060459],[52.183221,9.047799]], {color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.15})
+  .bindPopup('<strong>Freizeitnutzung und Camping</strong><br><em style="color:#d32f2f;">Bedrohung · Weserbergland</em>')
+  .addTo(featureLayers.team_wb_bedrohungen);
+
+// NABU Aktivitäten weitere — gelb
+featureLayers.team_wb_nabu_weitere = L.layerGroup();
+L.marker([52.447222, 9.257956], {icon:L.divIcon({className:'',html:'<div style="background:#c6a700;color:#fff;padding:3px 6px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.3);">ÖSSM</div>',iconSize:null}), zIndexOffset:5000})
+  .bindPopup('<strong>Ökologische Station (ÖSSM)</strong><br><em style="color:#c6a700;">NABU Aktivität · Weserbergland</em>')
+  .addTo(featureLayers.team_wb_nabu_weitere);
+L.polygon([[52.165706,9.214761],[52.1621,9.213324],[52.162205,9.217615],[52.16135,9.225855],[52.160665,9.231048],[52.161534,9.233623],[52.16314,9.233794],[52.163508,9.216607],[52.167207,9.217658],[52.168115,9.219203],[52.169405,9.219911],[52.169484,9.218237],[52.169234,9.216607]], {color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.15})
+  .bindPopup('<strong>Zuckerstab — Entwicklung</strong><br><em style="color:#c6a700;">NABU Aktivität · Weserbergland</em>')
+  .addTo(featureLayers.team_wb_nabu_weitere);
+
+// ============ TEAM-EINTRAEGE: HEILBRONN ============
+
+// Scope: Landschaftsrahmen Gesamt
+featureLayers.team_hn_scope = L.polygon([[49.023461,8.905792],[49.018508,8.952484],[49.010402,9.102859],[49.0077,9.213409],[49.004547,9.326706],[49.014906,9.416656],[49.037868,9.50386],[49.078814,9.606857],[49.10804,9.673462],[49.14758,9.718094],[49.177664,9.757919],[49.214906,9.808044],[49.254361,9.851303],[49.28214,9.876709],[49.339441,9.893188],[49.385949,9.878769],[49.408293,9.84375],[49.433306,9.810791],[49.489985,9.713287],[49.502472,9.672775],[49.504255,9.619904],[49.440003,9.540253],[49.41142,9.501114],[49.398909,9.387817],[49.3931,9.29306],[49.351967,9.181824],[49.312142,9.113159],[49.309904,9.055481],[49.301397,8.974457],[49.268701,8.941498],[49.229705,8.860474],[49.218943,8.797302],[49.17901,8.76915],[49.128263,8.77533],[49.073866,8.800049],[49.039668,8.823395]],
+  {color:'#1565c0',weight:3,fillColor:'#1565c0',fillOpacity:0.06,dashArray:'10,6',interactive:false})
+  .bindPopup('<strong>Landschaftsrahmen Gesamt</strong><br><em style="color:#1565c0;">Scope · Heilbronn / Hohenlohe</em>');
+
+// Schutzobjekt: Nachtigalleninsel
+featureLayers.team_hn_nachtigalleninsel = L.polygon([[49.079081,9.159722],[49.079165,9.158907],[49.079165,9.158285],[49.07932,9.157813],[49.079306,9.156997],[49.079151,9.156353],[49.078785,9.155881],[49.078167,9.155774],[49.077535,9.15556],[49.077057,9.15571],[49.076438,9.156032],[49.075904,9.156525],[49.075468,9.157212],[49.074948,9.157877],[49.074372,9.158478],[49.07395,9.159164],[49.073739,9.159787],[49.073346,9.160538],[49.074161,9.159422],[49.075103,9.158242],[49.075904,9.157383],[49.076537,9.157126],[49.077225,9.156911],[49.077844,9.157147],[49.078209,9.157856],[49.078575,9.158735]], {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.20})
+  .bindPopup('<strong>Nachtigalleninsel</strong><br><em style="color:#4caf50;">Schutzobjekt · Heilbronn</em>');
+
+// Schutzobjekte: Rebflächen / Weinbergsbrachen (4)
+featureLayers.team_hn_weinbergsbrachen = L.layerGroup([
+  L.polygon([[49.11186,9.141312],[49.117029,9.102173],[49.120175,9.028358],[49.113434,8.979607],[49.09163,8.957291],[49.04777,8.956604],[49.027289,9.005356],[49.025037,9.061661],[49.031791,9.094276],[49.05587,9.137192],[49.083311,9.166031],[49.091405,9.166374]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.15}).bindPopup('<strong>Rebflächen/Weinbergsbrachen (West)</strong><br><em style="color:#4caf50;">Heilbronn</em>'),
+  L.polygon([[49.041131,9.18457],[49.05317,9.138393],[49.066331,9.135475],[49.095677,9.169636],[49.114445,9.202251],[49.132307,9.238815],[49.142415,9.246025],[49.155215,9.230919],[49.160155,9.233322],[49.158695,9.262505],[49.131408,9.285507],[49.109501,9.291],[49.092642,9.264221],[49.073641,9.236412],[49.049008,9.200535]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.15}).bindPopup('<strong>Rebflächen/Weinbergsbrachen (Mitte)</strong><br><em style="color:#4caf50;">Heilbronn</em>'),
+  L.polygon([[49.069255,9.295635],[49.056883,9.277954],[49.033029,9.262505],[49.023687,9.270744],[49.009389,9.340267],[49.01727,9.3643],[49.03044,9.382324],[49.046307,9.391251],[49.058907,9.388161],[49.070605,9.357262],[49.073529,9.331341]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.15}).bindPopup('<strong>Rebflächen/Weinbergsbrachen (Ost)</strong><br><em style="color:#4caf50;">Heilbronn</em>'),
+  L.polygon([[49.160379,9.263535],[49.1679,9.274521],[49.169022,9.305077],[49.170818,9.335289],[49.167563,9.378548],[49.157909,9.393997],[49.143089,9.403267],[49.131521,9.398804],[49.127028,9.379749],[49.124332,9.355373],[49.119838,9.338379],[49.124107,9.295292],[49.134216,9.283104],[49.150949,9.270058]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.15}).bindPopup('<strong>Rebflächen/Weinbergsbrachen (Nord)</strong><br><em style="color:#4caf50;">Heilbronn</em>')
+]);
+
+// Schutzobjekte: Rebhuhngebiete (4)
+featureLayers.team_hn_rebhuhngebiete = L.layerGroup([
+  L.polygon([[49.072741,9.143543],[49.104219,9.175472],[49.137137,9.187489],[49.164084,9.195385],[49.178449,9.19487],[49.182601,9.171009],[49.177439,9.077282],[49.159481,8.968792],[49.138597,8.922615],[49.111411,8.973255],[49.089494,9.037971],[49.073753,9.093075],[49.069255,9.122257]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.12,dashArray:'6,4'}).bindPopup('<strong>Rebhuhngebiet (Heilbronn Kerngebiet)</strong>'),
+  L.polygon([[49.407064,9.613123],[49.405835,9.60969],[49.404439,9.607716],[49.39863,9.608231],[49.392374,9.611921],[49.386675,9.616213],[49.386619,9.626427],[49.389301,9.627628],[49.392038,9.630203],[49.394832,9.632177],[49.393882,9.636211],[49.395167,9.639559],[49.397625,9.641705],[49.399636,9.643078],[49.404271,9.646683],[49.407567,9.64797],[49.407958,9.646597],[49.409521,9.642563],[49.409745,9.638615],[49.408404,9.635696],[49.405724,9.634066],[49.403322,9.630203],[49.405779,9.62883],[49.407287,9.628229],[49.409745,9.626169],[49.410247,9.621191],[49.408907,9.615784]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.12,dashArray:'6,4'}).bindPopup('<strong>Rebhuhngebiet (Hohenlohe Süd)</strong>'),
+  L.polygon([[49.414491,9.611578],[49.413095,9.618444],[49.413263,9.63192],[49.417562,9.649515],[49.421917,9.653807],[49.427165,9.654837],[49.433976,9.657669],[49.442013,9.656639],[49.443798,9.643421],[49.443352,9.632435],[49.44737,9.613724],[49.446812,9.603682],[49.444915,9.597244],[49.44112,9.590721],[49.434422,9.587889],[49.427221,9.590549],[49.421359,9.594927],[49.416781,9.604282]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.12,dashArray:'6,4'}).bindPopup('<strong>Rebhuhngebiet (Hohenlohe Nord)</strong>'),
+  L.polygon([[49.342684,9.801607],[49.350177,9.783154],[49.361191,9.768476],[49.370861,9.756632],[49.376952,9.752855],[49.393659,9.769249],[49.401255,9.780407],[49.404216,9.804697],[49.402149,9.819975],[49.395502,9.833965],[49.385111,9.844265],[49.369687,9.85671],[49.357669,9.861517],[49.347661,9.858599],[49.344138,9.840746]],{color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.12,dashArray:'6,4'}).bindPopup('<strong>Rebhuhngebiet (Hohenlohe Ost)</strong>')
+]);
+
+featureLayers.team_hn_potenz_rebhuhn = L.polygon([[49.229593,9.483948],[49.218158,9.449959],[49.206159,9.40567],[49.176317,9.432106],[49.166216,9.502487],[49.17093,9.56583],[49.185518,9.603252],[49.211654,9.630547],[49.23531,9.620247],[49.256714,9.590549],[49.270717,9.549694],[49.244724,9.501801]],
+  {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.10,dashArray:'4,8'})
+  .bindPopup('<strong>Potentielles Rebhuhnhabitat</strong><br><em>Hohenlohe — noch zu bestätigen</em>');
+
+featureLayers.team_hn_rastplatz = L.polygon([[49.126199,9.392281],[49.126859,9.388783],[49.127182,9.384406],[49.126803,9.380372],[49.124739,9.375436],[49.120484,9.372239],[49.117268,9.371703],[49.114375,9.373891],[49.112071,9.375758],[49.110779,9.379985],[49.111256,9.3855],[49.111537,9.38962],[49.114206,9.392946],[49.121074,9.392796],[49.123868,9.393096]],
+  {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.20})
+  .bindPopup('<strong>Rastplatz Migrierende Vogelart</strong><br><em>Insbesondere Wasservögel · Heilbronn</em>');
+
+featureLayers.team_hn_feuchtgebiete = L.layerGroup([
+  L.polygon([[49.163045,8.939481],[49.162821,8.937335],[49.161951,8.936133],[49.160772,8.935318],[49.159313,8.93476],[49.158387,8.934889],[49.157096,8.935318],[49.156506,8.935833],[49.155804,8.93652],[49.155103,8.937593],[49.154598,8.939781],[49.155271,8.940854],[49.15746,8.941541],[49.160548,8.940597],[49.162484,8.940425]], {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.25}).bindPopup('<strong>Feuchtgebiet (West)</strong><br><em style="color:#4caf50;">Heilbronn</em>'),
+  L.polygon([[49.13781,9.25375],[49.137052,9.253922],[49.135985,9.254007],[49.134638,9.253964],[49.134385,9.252548],[49.134076,9.252548],[49.133599,9.253192],[49.133037,9.252934],[49.132532,9.254608],[49.131352,9.254308],[49.131408,9.253621],[49.129106,9.25405],[49.128769,9.254436],[49.12846,9.253578],[49.127505,9.253707],[49.122506,9.250102],[49.121017,9.250445],[49.120119,9.250402],[49.118181,9.249372],[49.118012,9.250574],[49.118153,9.252033],[49.117984,9.253149],[49.116945,9.254136],[49.117366,9.254522],[49.117956,9.25405],[49.118377,9.252892],[49.118321,9.25139],[49.118686,9.250402],[49.119613,9.250445],[49.120428,9.252205],[49.121495,9.250832],[49.126775,9.255981],[49.128376,9.256539],[49.12919,9.256196],[49.130987,9.254951],[49.132504,9.255166],[49.132869,9.255681],[49.133374,9.255638],[49.133346,9.254994],[49.134357,9.254522],[49.135676,9.255123],[49.136435,9.255037],[49.13708,9.254608]], {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.25}).bindPopup('<strong>Feuchtgebiete (Zentral / Sulm-Lein)</strong><br><em style="color:#4caf50;">Heilbronn</em>'),
+  L.polygon([[49.046954,9.159422],[49.044999,9.161417],[49.04521,9.162533],[49.044254,9.163413],[49.044198,9.163971],[49.044099,9.165108],[49.043888,9.165065],[49.044043,9.167275],[49.043705,9.16734],[49.04431,9.170408],[49.04334,9.169979],[49.042003,9.167876],[49.041483,9.166417],[49.041455,9.165924],[49.041947,9.164228],[49.042411,9.162726],[49.043424,9.160945],[49.044577,9.16013]], {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.25}).bindPopup('<strong>Feuchtgebiete (Süd / Zaberauen)</strong><br><em style="color:#4caf50;">Heilbronn</em>')
+]);
+
+featureLayers.team_hn_waldheide = L.polygon([[49.133262,9.272246],[49.130075,9.272225],[49.129836,9.271817],[49.129022,9.271688],[49.128853,9.272075],[49.127561,9.272203],[49.127435,9.272847],[49.12655,9.272954],[49.126452,9.272525],[49.125736,9.272461],[49.125595,9.273298],[49.125385,9.273384],[49.124655,9.273233],[49.124388,9.272139],[49.123321,9.272525],[49.123461,9.274006],[49.124233,9.274006],[49.125329,9.274585],[49.125652,9.274414],[49.127168,9.275959],[49.12985,9.275937],[49.130201,9.276366],[49.130566,9.276044],[49.132546,9.27628],[49.133458,9.276946],[49.133725,9.276538]], {color:'#4caf50',weight:2,fillColor:'#4caf50',fillOpacity:0.25})
+  .bindPopup('<strong>Waldheide</strong><br><em style="color:#4caf50;">Schutzobjekt · Heilbronn</em>');
+
+// Bedrohungen Heilbronn
+featureLayers.team_hn_windkraft = L.layerGroup([
+  L.polygon([[49.121748,9.003296],[49.108939,8.994026],[49.099161,8.997803],[49.094553,9.014969],[49.095677,9.041061],[49.096689,9.060974],[49.10096,9.107151],[49.112759,9.126377],[49.130173,9.121056],[49.135789,9.105091],[49.135452,9.062347],[49.132869,9.032135]],{color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.15}).bindPopup('<strong>Windkraftentwicklung — Windpark Heuchelberg</strong><br><em style="color:#d32f2f;">Bedrohung · Heilbronn</em>'),
+  L.polygon([[49.057614,9.320269],[49.05812,9.304304],[49.054351,9.29512],[49.049289,9.29306],[49.045857,9.303017],[49.041019,9.317093],[49.041469,9.323702],[49.044901,9.3328],[49.048895,9.340181],[49.054014,9.337435],[49.056995,9.329453]],{color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.15}).bindPopup('<strong>Windkraftentwicklung (Süd)</strong><br><em style="color:#d32f2f;">Bedrohung · Heilbronn</em>')
+]);
+
+featureLayers.team_hn_ipai = L.polygon([[49.184649,9.192724],[49.183358,9.189978],[49.181956,9.188004],[49.181058,9.187875],[49.180104,9.187317],[49.178758,9.186673],[49.178533,9.193583],[49.178365,9.195514],[49.180104,9.195685],[49.181451,9.195857],[49.183863,9.197659],[49.184509,9.195943]], {color:'#d32f2f',weight:2,fillColor:'#d32f2f',fillOpacity:0.20})
+  .bindPopup('<strong>KI Entwicklungszentrum IPAI</strong><br><em style="color:#d32f2f;">Bedrohung · Flächenverbrauch (Heilbronn)</em>');
+
+// NABU-Gruppen Heilbronn (15 circle markers)
+featureLayers.team_hn_nabu_gruppen = L.layerGroup([
+  L.circleMarker([49.137586,9.212422],{radius:7,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.9}).bindPopup('<strong>NABU Büro Heilbronn</strong>'),
+  L.circleMarker([49.07679,9.068012],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.066443,8.998318],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.14118,9.056339],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.0404,9.313917],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.024249,9.318552],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.239093,9.1011],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.41008,9.611492],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.481007,9.639902],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.150219,9.284563],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.137249,9.355116],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.200102,9.502144],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.32322,9.358807],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.227968,9.207401],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
+  L.circleMarker([49.230322,9.161739],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>')
+]);
+
+// Nachtigalleninsel — NABU-Flächen (2)
+featureLayers.team_hn_nabu_nacht_flaechen = L.layerGroup([
+  L.polygon([[49.077886,9.155635],[49.0779,9.157319],[49.079313,9.157341],[49.079298,9.156986],[49.0792,9.156547],[49.079102,9.156278],[49.07894,9.15601],[49.078708,9.155838],[49.078399,9.155731]], {color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.20}).bindPopup('<strong>Nachtigalleninsel NABU Fläche 1</strong><br><em style="color:#c6a700;">NABU · Heilbronn</em>'),
+  L.polygon([[49.075929,9.156552],[49.076031,9.157319],[49.075637,9.157582],[49.075528,9.157255],[49.075535,9.157067]], {color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.20}).bindPopup('<strong>Nachtigalleninsel NABU Fläche 2</strong><br><em style="color:#c6a700;">NABU · Heilbronn</em>')
+]);
+
+// Rebhuhnarbeit mit Landwirten
+featureLayers.team_hn_rebhuhnarbeit = L.layerGroup([
+  L.polygon([[49.083761,9.072733],[49.076284,9.07402],[49.072123,9.077969],[49.069311,9.081402],[49.068018,9.089384],[49.068805,9.094191],[49.070211,9.098997],[49.076621,9.104748],[49.07932,9.103975],[49.082918,9.09771],[49.085841,9.092646],[49.087415,9.083805],[49.086628,9.077625]],{color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.18}).bindPopup('<strong>Rebhuhnarbeit mit Landwirten — Blühstreifen (Heilbronn)</strong>'),
+  L.polygon([[49.407734,9.613895],[49.405277,9.608746],[49.401591,9.607887],[49.398016,9.609089],[49.393994,9.610977],[49.39053,9.613552],[49.387401,9.616127],[49.386619,9.621105],[49.386843,9.625568],[49.390977,9.629345],[49.394441,9.632263],[49.394329,9.636383],[49.396228,9.640846],[49.400362,9.643936],[49.406505,9.647369],[49.408628,9.645138],[49.409298,9.637756],[49.405388,9.63295],[49.404383,9.630718],[49.408293,9.628487],[49.410191,9.62574],[49.409745,9.619045]],{color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.18}).bindPopup('<strong>Rebhuhnarbeit mit Landwirten (Hohenlohe)</strong>'),
+  L.circleMarker([49.200327,9.506264],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.9}).bindPopup('<strong>Idee Rebhuhnarbeit mit Landwirten</strong><br><em>Hohenlohe — noch zu entwickeln</em>')
+]);
+
+featureLayers.team_hn_green_capital = L.polygon([[49.188211,9.218388],[49.192138,9.172554],[49.206944,9.166031],[49.210981,9.112816],[49.200214,9.114361],[49.200887,9.044666],[49.188211,9.079857],[49.174297,9.091702],[49.173624,9.1329],[49.161951,9.140453],[49.150836,9.168091],[49.128263,9.135132],[49.095227,9.164314],[49.095003,9.182167],[49.106017,9.182167],[49.113321,9.209976],[49.102421,9.25581],[49.110063,9.261818],[49.114332,9.306278],[49.121298,9.278812],[49.12523,9.284477],[49.147131,9.277782],[49.147468,9.260445],[49.158471,9.266109],[49.16992,9.225769]],
+  {color:'#c6a700',weight:2,fillColor:'#c6a700',fillOpacity:0.12,dashArray:'6,4'})
+  .bindPopup('<strong>Green Capital City Projekt Heilbronn</strong><br><em>NABU Unterstützung</em>');
+
+// ============ Feature State ============
+const featureState = {};
+Object.keys(featureLayers).forEach(k => featureState[k] = false);
+// Drei Landschaftsrahmen standardmäßig sichtbar
+featureState.team_lz_scope = true;
+featureState.team_wb_scope = true;
+featureState.team_hn_scope = true;
+map.addLayer(featureLayers.team_lz_scope);
+map.addLayer(featureLayers.team_wb_scope);
+map.addLayer(featureLayers.team_hn_scope);
+document.getElementById('cattgl-lausitz').classList.add('checked');
+document.getElementById('cattgl-weserbergland').classList.add('checked');
+document.getElementById('cattgl-heilbronn').classList.add('checked');
+
+// ============ TOGGLE FUNCTIONS ============
+function toggleFeature(key) {
+  if (!featureLayers[key]) return;
+  featureState[key] = !featureState[key];
+  if (featureState[key]) {
+    map.addLayer(featureLayers[key]);
+    document.getElementById('check-' + key)?.classList.add('checked');
+    sortLayersBySize();
+  } else {
+    map.removeLayer(featureLayers[key]);
+    document.getElementById('check-' + key)?.classList.remove('checked');
+  }
+}
+
+function sortLayersBySize() {
+  var allPolygons = [];
+  Object.keys(featureLayers).forEach(function(key) {
+    if (!featureState[key]) return;
+    var layer = featureLayers[key];
+    function collect(l) {
+      if (l.eachLayer) { l.eachLayer(collect); return; }
+      if (l.getBounds && l.getLatLngs) {
+        var b = l.getBounds();
+        var area = (b.getNorth()-b.getSouth()) * (b.getEast()-b.getWest());
+        allPolygons.push({ layer: l, area: area });
+      }
+    }
+    collect(layer);
+  });
+  allPolygons.sort(function(a,b) { return b.area - a.area; });
+  allPolygons.forEach(function(p) {
+    if (p.layer.bringToFront) p.layer.bringToFront();
+  });
+}
+
+function showTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabName).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleCatLayers(catName, keys) {
+  var tgl = document.getElementById('cattgl-' + catName);
+  var turnOn = !tgl.classList.contains('checked');
+  tgl.classList.toggle('checked', turnOn);
+  keys.forEach(function(key) {
+    if (!featureLayers[key]) return;
+    if (turnOn && !featureState[key]) { toggleFeature(key); }
+    else if (!turnOn && featureState[key]) { toggleFeature(key); }
+  });
+}
+
+function toggleCat(id) {
+  var body = document.getElementById(id);
+  var arrow = document.getElementById('arrow-' + id);
+  body.classList.toggle('collapsed');
+  arrow.classList.toggle('collapsed');
+}
+
+function togglePanel() {
+  document.getElementById('panel').classList.toggle('collapsed');
+  document.getElementById('toggle-panel').classList.toggle('collapsed');
+  document.getElementById('export-bar').classList.toggle('panel-collapsed');
+}
+
+// Initial UI sync: mark default-on checkboxes
+document.getElementById('check-team_lz_scope').classList.add('checked');
+document.getElementById('check-team_wb_scope').classList.add('checked');
+document.getElementById('check-team_hn_scope').classList.add('checked');
+
+// ══════════════════════════════════════════════════════════════════
+// ZEICHENWERKZEUG
+// ══════════════════════════════════════════════════════════════════
+let currentCategory = 'scope';
+let currentColor = '#1565c0';
+
+function setCategory(cat, color, btn) {
+  currentCategory = cat;
+  currentColor = color;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (drawControl._toolbars.draw) {
+    const opts = drawControl._toolbars.draw._modes;
+    if (opts.polygon) opts.polygon.handler.options.shapeOptions.color = color;
+    if (opts.polyline) opts.polyline.handler.options.shapeOptions.color = color;
+    if (opts.rectangle) opts.rectangle.handler.options.shapeOptions.color = color;
+  }
+}
+
+const drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+const drawControl = new L.Control.Draw({
+  position: 'topleft',
+  draw: {
+    polygon: { shapeOptions: { color: '#1565c0', weight: 3, fillOpacity: 0.20 } },
+    polyline: { shapeOptions: { color: '#1565c0', weight: 4 } },
+    rectangle: { shapeOptions: { color: '#1565c0', weight: 2, fillOpacity: 0.20 } },
+    circle: false, circlemarker: false, marker: true
+  },
+  edit: { featureGroup: drawnItems, remove: true }
+});
+map.addControl(drawControl);
+
+function updateDrawExport() {
+  const count = drawnItems.getLayers().length;
+  document.getElementById('draw-count').textContent = count;
+  if (count === 0) { document.getElementById('draw-export').style.display='none'; return; }
+  document.getElementById('draw-export').style.display = 'block';
+  const features = [];
+  drawnItems.eachLayer(function(layer) {
+    const feature = {
+      name: layer._drawLabel || 'Unbenannt',
+      category: layer._drawCategory || 'scope',
+      color: layer._drawColor || '#1565c0',
+      type: ''
+    };
+    if (layer instanceof L.Marker) {
+      const ll = layer.getLatLng();
+      feature.type = 'marker';
+      feature.coords = [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))];
+    } else if (layer instanceof L.Polygon) {
+      feature.type = 'polygon';
+      feature.coords = layer.getLatLngs()[0].map(function(ll) {
+        return [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))];
+      });
+    } else if (layer instanceof L.Polyline) {
+      feature.type = 'polyline';
+      feature.coords = layer.getLatLngs().map(function(ll) {
+        return [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))];
+      });
+    }
+    features.push(feature);
+  });
+  document.getElementById('draw-json').textContent = JSON.stringify(features, null, 2);
+}
+
+const catLabels = {
+  scope:'Scope/Rahmen', schutzobjekt:'Schutzobjekt/-gebiet', bedrohung:'Bedrohung',
+  nabu:'NABU Aktivitäten'
+};
+
+// ── Custom Modal Dialogs ──
+function showAlert(msg) {
+  return new Promise(function(resolve) {
+    var ov = document.createElement('div'); ov.className = 'modal-overlay';
+    ov.innerHTML = '<div class="modal-box"><div class="modal-msg"></div><div class="modal-btns"><button class="btn-ok">OK</button></div></div>';
+    ov.querySelector('.modal-msg').textContent = msg;
+    ov.querySelector('.btn-ok').onclick = function() { document.body.removeChild(ov); resolve(); };
+    ov.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === 'Escape') { document.body.removeChild(ov); resolve(); } });
+    document.body.appendChild(ov);
+    ov.querySelector('.btn-ok').focus();
+  });
+}
+function showPrompt(msg, defaultVal) {
+  return new Promise(function(resolve) {
+    var ov = document.createElement('div'); ov.className = 'modal-overlay';
+    ov.innerHTML = '<div class="modal-box"><div class="modal-msg"></div><input type="text"><div class="modal-btns"><button class="btn-cancel">Abbrechen</button><button class="btn-ok">OK</button></div></div>';
+    ov.querySelector('.modal-msg').textContent = msg;
+    var inp = ov.querySelector('input'); inp.value = defaultVal || '';
+    ov.querySelector('.btn-ok').onclick = function() { document.body.removeChild(ov); resolve(inp.value || null); };
+    ov.querySelector('.btn-cancel').onclick = function() { document.body.removeChild(ov); resolve(null); };
+    inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { document.body.removeChild(ov); resolve(inp.value || null); } else if (e.key === 'Escape') { document.body.removeChild(ov); resolve(null); } });
+    document.body.appendChild(ov);
+    inp.focus();
+  });
+}
+
+map.on(L.Draw.Event.CREATED, async function(e) {
+  var name = await showPrompt('Name / Beschreibung für dieses Feature:\n(Kategorie: ' + (catLabels[currentCategory]||currentCategory) + ')');
+  if (name === null) name = 'Unbenannt';
+  e.layer._drawLabel = name;
+  e.layer._drawCategory = currentCategory;
+  e.layer._drawColor = currentColor;
+  if (e.layer.setStyle) {
+    e.layer.setStyle({ color: currentColor, fillColor: currentColor, fillOpacity: 0.20, weight: 3 });
+  }
+  var catText = catLabels[currentCategory] || currentCategory;
+  e.layer.bindPopup('<strong>' + name + '</strong><br><em style="color:' + currentColor + ';">' + catText + '</em>');
+  e.layer.bindTooltip(name, { permanent: false, direction: 'top' });
+  drawnItems.addLayer(e.layer);
+  updateDrawExport();
+});
+map.on(L.Draw.Event.EDITED, updateDrawExport);
+map.on(L.Draw.Event.DELETED, updateDrawExport);
+
+function copyToClipboard(text, successMsg) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showAlert(successMsg);
+    }).catch(function() { copyFallback(text, successMsg); });
+  } else {
+    copyFallback(text, successMsg);
+  }
+}
+function copyFallback(text, successMsg) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try {
+    var ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok) { showAlert(successMsg); return; }
+  } catch(e) { document.body.removeChild(ta); }
+}
+
+function copyDrawJSON() {
+  const text = document.getElementById('draw-json').textContent;
+  copyToClipboard(text, 'Koordinaten in Zwischenablage kopiert! An Nico weiterleiten zur Integration.');
+}
+function clearDrawn() { drawnItems.clearLayers(); updateDrawExport(); }
+
+// ── Shape-Labels Toggle ──
+let labelsVisible = false;
+function toggleLabels() {
+  labelsVisible = !labelsVisible;
+  var btn = document.getElementById('btn-labels');
+  btn.textContent = labelsVisible ? '🏷️ Shape-Labels ausblenden' : '🏷️ Shape-Labels einblenden';
+  btn.style.background = labelsVisible ? '#2e7d32' : '#555';
+  Object.keys(featureLayers).forEach(function(key) {
+    if (!key.startsWith('team_')) return;
+    var layer = featureLayers[key];
+    function processLayer(l) {
+      if (l.eachLayer) { l.eachLayer(processLayer); return; }
+      if (!l.getPopup || !l.getPopup()) return;
+      var popContent = l.getPopup().getContent();
+      var match = popContent.match(/<strong>(.*?)<\/strong>/);
+      if (!match) return;
+      var name = match[1];
+      if (labelsVisible) {
+        l.bindTooltip(name, { permanent:true, direction:'center', className:'shape-label' });
+      } else {
+        l.unbindTooltip();
+      }
+    }
+    processLayer(layer);
+  });
+}
+
+// ── Text-Notiz ──
+let noteMode = false;
+function addTextNote() {
+  if (noteMode) { noteMode = false; map.getContainer().style.cursor = ''; return; }
+  noteMode = true;
+  map.getContainer().style.cursor = 'crosshair';
+  async function onNoteClick(e) {
+    noteMode = false;
+    map.getContainer().style.cursor = '';
+    map.getContainer().removeEventListener('click', onNoteClick);
+    var ll = map.containerPointToLatLng(L.point(e.offsetX, e.offsetY));
+    var text = await showPrompt('Notiz-Text:');
+    if (!text) return;
+    var icon = L.divIcon({ className: '', html: '<div class="map-note">' + text + '</div>', iconSize: null });
+    var marker = L.marker(ll, { icon: icon, draggable: true, zIndexOffset: 10000 });
+    marker._drawLabel = text;
+    marker._drawCategory = 'notiz';
+    marker._drawColor = '#e65100';
+    marker.bindPopup('<strong>' + text + '</strong><br><em style="color:#e65100;">Notiz</em>');
+    drawnItems.addLayer(marker);
+    updateDrawExport();
+  }
+  map.getContainer().addEventListener('click', onNoteClick);
+}
+
+// ── Shape-Auswahl + Shapefile-Export ──
+var selectMode = false;
+var selectedLayers = new Set();
+var originalStyles = new Map();
+
+function toggleSelectMode() {
+  selectMode = !selectMode;
+  var btn = document.getElementById('select-mode-btn');
+  var mapEl = document.getElementById('map');
+  btn.classList.toggle('active-mode', selectMode);
+  btn.textContent = selectMode ? '✋ Auswahl aktiv' : '✋ Auswählen';
+  mapEl.classList.toggle('select-mode', selectMode);
+  if (!selectMode && selectedLayers.size > 0) {
+    document.getElementById('export-selected-btn').style.display = '';
+    document.getElementById('clear-selection-btn').style.display = '';
+  }
+}
+
+function updateSelectionUI() {
+  var count = selectedLayers.size;
+  document.getElementById('select-count').textContent = count;
+  document.getElementById('export-selected-btn').style.display = count > 0 ? '' : 'none';
+  document.getElementById('clear-selection-btn').style.display = count > 0 ? '' : 'none';
+}
+
+function clearSelection() {
+  selectedLayers.forEach(function(l) {
+    if (originalStyles.has(l) && l.setStyle) {
+      l.setStyle(originalStyles.get(l));
+    }
+  });
+  selectedLayers.clear();
+  originalStyles.clear();
+  updateSelectionUI();
+}
+
+function registerSelectHandlers() {
+  Object.keys(featureLayers).forEach(function(key) {
+    if (!key.startsWith('team_')) return;
+    function addHandler(l) {
+      if (l.eachLayer) { l.eachLayer(addHandler); return; }
+      l.on('click', function(e) {
+        if (!selectMode) return;
+        L.DomEvent.stopPropagation(e);
+        if (selectedLayers.has(l)) {
+          selectedLayers.delete(l);
+          if (originalStyles.has(l) && l.setStyle) {
+            l.setStyle(originalStyles.get(l));
+            originalStyles.delete(l);
+          }
+        } else {
+          selectedLayers.add(l);
+          if (l.setStyle) {
+            var cur = {};
+            if (l.options) { cur = { color: l.options.color, weight: l.options.weight, dashArray: l.options.dashArray, fillOpacity: l.options.fillOpacity }; }
+            originalStyles.set(l, cur);
+            l.setStyle({ color: '#ffffff', weight: 5, dashArray: null, fillOpacity: 0.35 });
+          }
+        }
+        updateSelectionUI();
+      });
+    }
+    addHandler(featureLayers[key]);
+  });
+}
+
+function layerToGeoFeature(l, fallbackName) {
+  var props = { name: fallbackName || '', category: '' };
+  if (l.getPopup && l.getPopup()) {
+    var match = l.getPopup().getContent().match(/<strong>(.*?)<\/strong>/);
+    if (match) props.name = match[1];
+  }
+  if (l._drawLabel) props.name = l._drawLabel;
+  if (l._drawCategory) props.category = l._drawCategory;
+  if (l.getLatLngs) {
+    if (l instanceof L.Polygon) {
+      var coords = l.getLatLngs()[0].map(function(ll) { return [ll.lng, ll.lat]; });
+      coords.push(coords[0]);
+      return { type:'Feature', properties:props, geometry:{ type:'Polygon', coordinates:[coords] } };
+    } else {
+      var coords2 = l.getLatLngs().map(function(ll) { return [ll.lng, ll.lat]; });
+      return { type:'Feature', properties:props, geometry:{ type:'LineString', coordinates:coords2 } };
+    }
+  } else if (l.getLatLng) {
+    var ll = l.getLatLng();
+    return { type:'Feature', properties:props, geometry:{ type:'Point', coordinates:[ll.lng, ll.lat] } };
+  }
+  return null;
+}
+
+function exportShapefile(mode) {
+  var geoFeatures = [];
+  if (mode === 'selected') {
+    selectedLayers.forEach(function(l) {
+      var f = layerToGeoFeature(l);
+      if (f) geoFeatures.push(f);
+    });
+  }
+  if (geoFeatures.length === 0) {
+    showAlert('Keine Shapes ausgewählt.\n\n1. Klick "✋ Auswählen"\n2. Klick auf Shapes um sie zu markieren (weiß)\n3. Klick "📦 Export"');
+    return;
+  }
+  var geojson = { type:'FeatureCollection', features: geoFeatures };
+  var polygons = { type:'FeatureCollection', features: geoFeatures.filter(function(f){ return f.geometry.type === 'Polygon'; }) };
+  var lines = { type:'FeatureCollection', features: geoFeatures.filter(function(f){ return f.geometry.type === 'LineString'; }) };
+  var points = { type:'FeatureCollection', features: geoFeatures.filter(function(f){ return f.geometry.type === 'Point'; }) };
+  var exportSet = polygons.features.length > 0 ? polygons : (lines.features.length > 0 ? lines : points);
+  var typeName = polygons.features.length > 0 ? 'Polygone' : (lines.features.length > 0 ? 'Linien' : 'Punkte');
+
+  if (typeof shpwrite !== 'undefined' && shpwrite.zip) {
+    try {
+      var zipContent = shpwrite.zip(exportSet);
+      var binary = atob(zipContent);
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      var blob = new Blob([bytes], { type: 'application/zip' });
+      var blobUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'Uebersichtskarte-' + new Date().toISOString().slice(0,10) + '.zip';
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+      if (geoFeatures.length !== exportSet.features.length) {
+        showAlert('Shapefile enthält ' + exportSet.features.length + ' ' + typeName + '.\n' +
+          (geoFeatures.length - exportSet.features.length) + ' Features mit anderem Geometrietyp wurden ausgelassen.\n' +
+          '(Ein Shapefile kann nur einen Geometrietyp enthalten.)');
+      }
+      return;
+    } catch(err) {
+      console.error('Shapefile fehlgeschlagen:', err);
+      showAlert('Shapefile-Export fehlgeschlagen: ' + err.message + '\n\nFallback: GeoJSON');
+    }
+  }
+  var fjson = new Blob([JSON.stringify(geojson, null, 2)], {type:'application/json'});
+  var furl = URL.createObjectURL(fjson);
+  var fa = document.createElement('a');
+  fa.href = furl;
+  fa.download = 'Uebersichtskarte-' + new Date().toISOString().slice(0,10) + '.geojson';
+  fa.click();
+  URL.revokeObjectURL(furl);
+}
+
+setTimeout(registerSelectHandlers, 2000);
+
+// ── Screenshot-Export ──
+function takeScreenshot() {
+  var btn = document.getElementById('screenshot-btn');
+  btn.classList.add('busy');
+  btn.textContent = '⏳ Erstellt...';
+  var cursor = document.getElementById('custom-cursor');
+  var exportBox = document.getElementById('draw-export');
+  var catBar = document.getElementById('category-bar');
+  var coordsDisp = document.getElementById('coords-display');
+  var exportBar = document.getElementById('export-bar');
+  cursor.style.display = 'none';
+  if (exportBox) exportBox.style.visibility = 'hidden';
+  if (catBar) catBar.style.visibility = 'hidden';
+  if (coordsDisp) coordsDisp.style.visibility = 'hidden';
+  if (exportBar) exportBar.style.visibility = 'hidden';
+  setTimeout(function() {
+    html2canvas(document.getElementById('map'), {
+      useCORS: true, allowTaint: true, scale: 2, logging: false, backgroundColor: '#ffffff'
+    }).then(function(canvas) {
+      canvas.toBlob(function(blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "Uebersichtskarte-" + new Date().toISOString().slice(0,10) + ".png";
+        a.click();
+        if (exportBox) exportBox.style.visibility = 'visible';
+        if (catBar) catBar.style.visibility = 'visible';
+        if (coordsDisp) coordsDisp.style.visibility = 'visible';
+        if (exportBar) exportBar.style.visibility = 'visible';
+        btn.classList.remove('busy');
+        btn.textContent = '📷 PNG';
+      });
+    }).catch(function(err) {
+      console.error('Screenshot fehlgeschlagen:', err);
+      if (exportBox) exportBox.style.visibility = 'visible';
+      if (catBar) catBar.style.visibility = 'visible';
+      if (coordsDisp) coordsDisp.style.visibility = 'visible';
+      if (exportBar) exportBar.style.visibility = 'visible';
+      btn.classList.remove('busy');
+      btn.textContent = '📷 PNG';
+    });
+  }, 300);
+}
+
+// Koordinatenanzeige + sichtbarer Cursor
+var cursor = document.getElementById('custom-cursor');
+document.addEventListener('mousemove', function(e) {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+  cursor.style.display = 'block';
+});
+document.addEventListener('mouseleave', function() { cursor.style.display = 'none'; });
+map.on('mousemove', function(e) {
+  document.getElementById('coords-display').textContent =
+    e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5);
+});
+</script>
+</body>
+</html>
