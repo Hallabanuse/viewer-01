@@ -458,7 +458,7 @@ async function checkPw(){
       <div class="feature-item" onclick="toggleFeature('team_hn_nabu_gruppen')">
         <div class="checkbox" id="check-team_hn_nabu_gruppen"></div>
         <div class="feature-dot" style="background:#c6a700; border-color:#9e8600;"></div>
-        <div class="feature-label">NABU Büro + Gruppen (15)</div>
+        <div class="feature-label">NABU-Gruppen (19)</div>
       </div>
       <div class="feature-item" onclick="toggleFeature('team_hn_nabu_nacht_flaechen')">
         <div class="checkbox" id="check-team_hn_nabu_nacht_flaechen"></div>
@@ -945,21 +945,25 @@ featureLayers.team_hn_ipai = L.polygon([[49.184649,9.192724],[49.183358,9.189978
 
 // NABU-Gruppen Heilbronn (15 circle markers)
 featureLayers.team_hn_nabu_gruppen = L.layerGroup([
-  L.circleMarker([49.137586,9.212422],{radius:7,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.9}).bindPopup('<strong>NABU Büro Heilbronn</strong>'),
-  L.circleMarker([49.07679,9.068012],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.066443,8.998318],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.14118,9.056339],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.0404,9.313917],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.024249,9.318552],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.239093,9.1011],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.41008,9.611492],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.481007,9.639902],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.150219,9.284563],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.137249,9.355116],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.200102,9.502144],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.32322,9.358807],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.227968,9.207401],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>'),
-  L.circleMarker([49.230322,9.161739],{radius:5,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.8}).bindPopup('<strong>NABU Gruppe</strong>')
+  L.circleMarker([49.07798,9.066726],{radius:7,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.9}).bindPopup('<strong>NABU-Kreisverband Heilbronn</strong>'),
+  L.circleMarker([49.227801,9.207697],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Bad Friedrichshall und Umgebung e. V.</strong>'),
+  L.circleMarker([49.039616,9.312431],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Beilstein</strong>'),
+  L.circleMarker([49.076892,9.074031],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Brackenheim</strong>'),
+  L.circleMarker([49.04411,9.038495],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Cleebronn</strong>'),
+  L.circleMarker([49.135747,8.907222],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Eppingen-Elsenz e. V.</strong>'),
+  L.circleMarker([49.16948,9.268652],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Erlenbach-Binswangen e. V.</strong>'),
+  L.circleMarker([49.066134,9.001061],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Güglingen e. V.</strong>'),
+  L.circleMarker([49.136861,9.222922],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Heilbronn und Umgebung e. V.</strong>'),
+  L.circleMarker([49.188938,9.64272],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Hohenloher Ebene</strong>'),
+  L.circleMarker([49.41035,9.611805],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Krautheim</strong>'),
+  L.circleMarker([49.299898,9.650937],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Künzelsau</strong>'),
+  L.circleMarker([49.141459,9.403636],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Obersulm</strong>'),
+  L.circleMarker([49.199742,9.503836],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Öhringen</strong>'),
+  L.circleMarker([49.127252,8.930933],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Östlicher Kraichgau e. V.</strong>'),
+  L.circleMarker([49.143589,9.123323],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Schwaigern und Umgebung e. V.</strong>'),
+  L.circleMarker([49.322914,9.360182],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Unteres Jagsttal e. V.</strong>'),
+  L.circleMarker([49.239221,9.25651],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Unteres Kochertal e. V.</strong>'),
+  L.circleMarker([49.149155,9.286727],{radius:6,fillColor:'#c6a700',color:'#fff',weight:2,fillOpacity:0.85}).bindPopup('<strong>NABU-Gruppe Weinsberg e. V.</strong>')
 ]);
 
 // Nachtigalleninsel — NABU-Flächen (2)
